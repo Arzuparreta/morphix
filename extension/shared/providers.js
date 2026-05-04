@@ -6,7 +6,8 @@
     model: "openrouter/free",
     apiKey: "",
     baseUrl: "https://openrouter.ai/api/v1",
-    customHeaders: ""
+    customHeaders: "",
+    reasoningMode: "balanced"
   };
 
   const PROVIDERS = {
@@ -33,9 +34,10 @@
     opencode_go: {
       name: "OpenCode Go",
       type: "openai-compatible",
-      defaultModel: "glm-5",
+      defaultModel: "glm-5.1",
       defaultBaseUrl: "https://opencode.ai/zen/go/v1",
-      requiresKey: true
+      requiresKey: true,
+      thinkingControl: "glm"
     },
     ollama: {
       name: "Ollama",
@@ -75,7 +77,8 @@
       model: stored.model || definition.defaultModel || DEFAULT_PROVIDER_CONFIG.model,
       apiKey: stored.apiKey || (provider === "anthropic" ? legacy.anthropic_api_key : "") || "",
       baseUrl: normalizeBaseUrl(stored.baseUrl || definition.defaultBaseUrl || DEFAULT_PROVIDER_CONFIG.baseUrl),
-      customHeaders: stored.customHeaders || ""
+      customHeaders: stored.customHeaders || "",
+      reasoningMode: stored.reasoningMode || definition.defaultReasoningMode || DEFAULT_PROVIDER_CONFIG.reasoningMode
     };
   }
 
@@ -86,7 +89,8 @@
       model: (config.model || definition.defaultModel || "").trim(),
       apiKey: (config.apiKey || "").trim(),
       baseUrl: normalizeBaseUrl(config.baseUrl || definition.defaultBaseUrl || ""),
-      customHeaders: (config.customHeaders || "").trim()
+      customHeaders: (config.customHeaders || "").trim(),
+      reasoningMode: config.reasoningMode || definition.defaultReasoningMode || DEFAULT_PROVIDER_CONFIG.reasoningMode
     };
     await chrome.storage.local.set({ [PROVIDER_CONFIG_KEY]: next });
     if (next.provider === "anthropic") {
@@ -181,6 +185,32 @@
     return body;
   }
 
+  function addReasoningOptions(body, providerDefinition) {
+    if (!providerDefinition.lowReasoning) return body;
+    body.reasoning_effort = "low";
+    body.reasoning = {
+      effort: "low",
+      exclude: true
+    };
+    return body;
+  }
+
+  function addThinkingOptions(body, providerDefinition, config) {
+    if (providerDefinition.thinkingControl !== "glm") return body;
+    if (config.reasoningMode === "speed") {
+      body.thinking = { type: "disabled" };
+      body.enable_thinking = false;
+      body.chat_template_kwargs = { enable_thinking: false };
+    } else if (config.reasoningMode === "deep") {
+      body.enable_thinking = true;
+      body.chat_template_kwargs = {
+        enable_thinking: true,
+        clear_thinking: false
+      };
+    }
+    return body;
+  }
+
   async function callAnthropic(config, systemPrompt, userPrompt, maxTokens) {
     const payload = await requestJson(`${normalizeBaseUrl(config.baseUrl)}/v1/messages`, {
       method: "POST",
@@ -211,6 +241,18 @@
       || message.includes("plugin");
   }
 
+  function isReasoningOptionUnsupported(error) {
+    const message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return message.includes("reasoning")
+      || message.includes("reasoning_effort")
+      || message.includes("thinking")
+      || message.includes("enable_thinking")
+      || message.includes("chat_template")
+      || message.includes("unknown parameter")
+      || message.includes("unsupported parameter")
+      || message.includes("unrecognized");
+  }
+
   async function callOpenAiCompatible(config, providerDefinition, systemPrompt, userPrompt, maxTokens, options) {
     const headers = {
       "content-type": "application/json",
@@ -220,7 +262,7 @@
     const apiKey = providerDefinition.sendAuth === false ? "" : config.apiKey;
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
-    const body = addStructuredOutputOptions({
+    const body = addThinkingOptions(addReasoningOptions(addStructuredOutputOptions({
         model: config.model,
         messages: buildOpenAiMessages(systemPrompt, userPrompt),
         max_tokens: maxTokens,
@@ -229,24 +271,52 @@
       },
       providerDefinition,
       options
-    );
+    ), providerDefinition), providerDefinition, config);
 
     let payload;
+    const url = `${normalizeBaseUrl(config.baseUrl)}/chat/completions`;
+    const makeRequest = async () => requestJson(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+
     try {
-      payload = await requestJson(`${normalizeBaseUrl(config.baseUrl)}/chat/completions`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body)
-      });
+      payload = await makeRequest();
     } catch (error) {
-      if (!options || !options.structured || !isStructuredOutputUnsupported(error)) throw error;
-      delete body.response_format;
-      delete body.plugins;
-      payload = await requestJson(`${normalizeBaseUrl(config.baseUrl)}/chat/completions`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body)
-      });
+      if (providerDefinition.lowReasoning && isReasoningOptionUnsupported(error)) {
+        delete body.reasoning;
+        delete body.reasoning_effort;
+        delete body.thinking;
+        delete body.enable_thinking;
+        delete body.chat_template_kwargs;
+        try {
+          payload = await makeRequest();
+        } catch (retryError) {
+          if (!options || !options.structured || !isStructuredOutputUnsupported(retryError)) throw retryError;
+          delete body.response_format;
+          delete body.plugins;
+          payload = await makeRequest();
+        }
+      } else if (providerDefinition.thinkingControl === "glm" && isReasoningOptionUnsupported(error)) {
+        delete body.thinking;
+        delete body.enable_thinking;
+        delete body.chat_template_kwargs;
+        try {
+          payload = await makeRequest();
+        } catch (retryError) {
+          if (!options || !options.structured || !isStructuredOutputUnsupported(retryError)) throw retryError;
+          delete body.response_format;
+          delete body.plugins;
+          payload = await makeRequest();
+        }
+      } else if (options && options.structured && isStructuredOutputUnsupported(error)) {
+        delete body.response_format;
+        delete body.plugins;
+        payload = await makeRequest();
+      } else {
+        throw error;
+      }
     }
 
     const choice = payload.choices && payload.choices[0];

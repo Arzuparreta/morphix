@@ -2,6 +2,7 @@
   const providerEl = document.getElementById("provider");
   const modelEl = document.getElementById("model");
   const keyEl = document.getElementById("api-key");
+  const reasoningModeEl = document.getElementById("reasoning-mode");
   const baseUrlEl = document.getElementById("base-url");
   const headersEl = document.getElementById("custom-headers");
   const testProviderEl = document.getElementById("test-provider");
@@ -45,6 +46,7 @@
     providerEl.value = config.provider || "openrouter";
     modelEl.value = config.model || "";
     keyEl.value = config.apiKey || "";
+    reasoningModeEl.value = config.reasoningMode || "balanced";
     baseUrlEl.value = config.baseUrl || "";
     headersEl.value = config.customHeaders || "";
     updateKeyPlaceholder();
@@ -56,6 +58,7 @@
     baseUrlEl.value = provider.defaultBaseUrl || "";
     headersEl.value = "";
     keyEl.value = "";
+    reasoningModeEl.value = provider.defaultReasoningMode || "balanced";
     updateKeyPlaceholder();
   }
 
@@ -70,7 +73,8 @@
       model: modelEl.value.trim(),
       apiKey: keyEl.value.trim(),
       baseUrl: baseUrlEl.value.trim(),
-      customHeaders: headersEl.value.trim()
+      customHeaders: headersEl.value.trim(),
+      reasoningMode: reasoningModeEl.value
     };
   }
 

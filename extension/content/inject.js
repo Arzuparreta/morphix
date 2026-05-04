@@ -67,7 +67,7 @@
       sheet.replaceSync(css);
       const sheets = getConstructedStylesheets();
       sheets[id] = sheet;
-      document.adoptedStyleSheets = document.adoptedStyleSheets.concat(sheet);
+      document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets || []).concat(sheet);
       return true;
     } catch (_error) {
       return false;
@@ -78,16 +78,20 @@
     const sheets = getConstructedStylesheets();
     const sheet = sheets[id];
     if (!sheet) return;
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((existing) => existing !== sheet);
+    try {
+      document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets || []).filter((existing) => existing !== sheet);
+    } catch (_error) {
+      // Removal can fail on pages that expose adoptedStyleSheets but reject assignment.
+    }
     delete sheets[id];
   }
 
   function notifyRouteChange(reason) {
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: "RESTYLE_ROUTE_CHANGED",
       url: location.href,
       reason
-    }).catch(() => {});
+    });
   }
 
   function checkNavigation(reason) {
@@ -123,19 +127,32 @@
       });
     }
 
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-    history.pushState = function () {
-      const result = originalPushState.apply(this, arguments);
-      setTimeout(() => checkNavigation("pushState"), 0);
-      return result;
-    };
-    history.replaceState = function () {
-      const result = originalReplaceState.apply(this, arguments);
-      setTimeout(() => checkNavigation("replaceState"), 0);
-      return result;
-    };
+    try {
+      const originalPushState = history.pushState;
+      const originalReplaceState = history.replaceState;
+      history.pushState = function () {
+        const result = originalPushState.apply(this, arguments);
+        setTimeout(() => checkNavigation("pushState"), 0);
+        return result;
+      };
+      history.replaceState = function () {
+        const result = originalReplaceState.apply(this, arguments);
+        setTimeout(() => checkNavigation("replaceState"), 0);
+        return result;
+      };
+    } catch (_error) {
+      // Some pages lock down history methods. Mutation and popstate detection still work.
+    }
     window.addEventListener("popstate", () => setTimeout(() => checkNavigation("popstate"), 0));
+  }
+
+  function safeSendMessage(message) {
+    try {
+      const response = chrome.runtime.sendMessage(message);
+      if (response && typeof response.catch === "function") response.catch(() => {});
+    } catch (_error) {
+      // The extension context can disappear during reloads or extension updates.
+    }
   }
 
   window.RestyleInject = {
@@ -146,8 +163,8 @@
   };
 
   installObserver();
-  chrome.runtime.sendMessage({
+  safeSendMessage({
     type: "RESTYLE_PAGE_READY",
     url: location.href
-  }).catch(() => {});
+  });
 })();

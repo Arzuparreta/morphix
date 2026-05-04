@@ -2,6 +2,7 @@
   const RESTYLE_SYSTEM_PROMPT = [
     "You generate browser-extension restyles for live websites.",
     "Return ONLY a valid JSON object with this shape: {\"css\":\"...\",\"js\":\"...\",\"description\":\"...\"}.",
+    "Do not include reasoning, markdown, explanations, code fences, or any text outside the JSON object.",
     "The description must be one plain-English sentence summarizing the visible change.",
     "Use robust CSS selectors. Prefer semantic tags, roles, stable attributes, data attributes, element relationships, and :nth-child when needed.",
     "Avoid hashed or build-generated class names when possible.",

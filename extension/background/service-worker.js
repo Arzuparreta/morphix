@@ -123,7 +123,7 @@ async function callAiProvider(prompt, pageContext) {
     providerConfig,
     RestylePrompts.RESTYLE_SYSTEM_PROMPT,
     RestylePrompts.buildRestyleUserPrompt(prompt, pageContext),
-    3200,
+    12000,
     { structured: true }
   );
   try {
@@ -205,7 +205,7 @@ async function repairAiJson(providerConfig, badText, parseError) {
     providerConfig,
     "You repair malformed JSON for a browser extension. Reply with valid JSON only.",
     repairPrompt,
-    3200,
+    8000,
     { structured: true }
   );
 }
