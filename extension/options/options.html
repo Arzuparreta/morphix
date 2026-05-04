@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Morphix Options</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>Morphix Options</h1>
+        <p class="muted">Provider settings and keys are stored locally in Chrome. Page context is sent only to the provider you choose when you click Apply.</p>
+
+        <label for="provider">AI provider</label>
+        <select id="provider"></select>
+
+        <div class="provider-grid">
+          <div>
+            <label for="model">Model</label>
+            <input id="model" type="text" autocomplete="off" placeholder="model id">
+          </div>
+          <div>
+            <label for="api-key">API key</label>
+            <input id="api-key" type="password" autocomplete="off" placeholder="optional for local providers">
+          </div>
+        </div>
+
+        <label for="base-url">Base URL</label>
+        <input id="base-url" type="url" autocomplete="off" placeholder="https://provider.example/v1">
+
+        <label for="custom-headers">Custom headers JSON</label>
+        <textarea id="custom-headers" rows="3" spellcheck="false" placeholder="{&quot;X-App&quot;:&quot;Morphix&quot;}"></textarea>
+
+        <div class="provider-actions">
+          <button id="test-provider" type="button">Test provider</button>
+          <button id="save-provider" type="button">Save provider</button>
+        </div>
+
+        <p class="links">
+          <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">OpenRouter keys</a>
+          <a href="https://opencode.ai/go" target="_blank" rel="noreferrer">OpenCode Go</a>
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">Anthropic keys</a>
+        </p>
+        <p id="provider-status" class="muted" aria-live="polite"></p>
+      </section>
+
+      <section>
+        <h2>Style Library</h2>
+        <div id="library" class="library"></div>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

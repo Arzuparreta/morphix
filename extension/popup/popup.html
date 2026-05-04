@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Morphix Restyle</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <section class="compose" id="compose">
+        <label class="sr-only" for="prompt">Restyle prompt</label>
+        <textarea id="prompt" rows="3" placeholder="Describe a change for this page"></textarea>
+        <div class="bar">
+          <span id="site-status" class="site-status">Checking this site...</span>
+          <button id="apply" type="button">Apply</button>
+        </div>
+      </section>
+
+      <section class="status hidden" id="status" aria-live="polite"></section>
+
+      <section class="review hidden" id="review">
+        <p class="description" id="description"></p>
+
+        <details class="sent">
+          <summary>What we sent</summary>
+          <pre id="sent-context"></pre>
+        </details>
+
+        <div class="actions" aria-label="Keep or discard restyle">
+          <button class="row" id="keep-url" type="button">
+            <span>Apply every time on this URL</span>
+          </button>
+          <button class="row" id="keep-domain" type="button">
+            <span>Apply every time on this domain</span>
+          </button>
+          <button class="row" id="keep-session" type="button">
+            <span>Apply only this session</span>
+          </button>
+          <div class="library-save">
+            <input id="library-name" type="text" placeholder="Library name">
+            <button class="row" id="save-library" type="button">
+              <span>Save to library</span>
+            </button>
+          </div>
+          <button class="row danger" id="retry" type="button">
+            <span>Retry with same prompt</span>
+          </button>
+          <button class="row danger" id="different" type="button">
+            <span>Try a different prompt</span>
+          </button>
+        </div>
+      </section>
+
+      <footer>
+        <a href="#" id="options">Options</a>
+      </footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
