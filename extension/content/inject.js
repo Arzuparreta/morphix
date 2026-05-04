@@ -6,6 +6,9 @@
   let lastUrl = location.href;
   let mutationCount = 0;
   let timer = null;
+  let observer = null;
+  let isActive = true;
+  let popstateHandler = null;
 
   function ensureHead() {
     if (!document.head) {
@@ -87,6 +90,7 @@
   }
 
   function notifyRouteChange(reason) {
+    if (!isActive) return;
     safeSendMessage({
       type: "RESTYLE_ROUTE_CHANGED",
       url: location.href,
@@ -95,6 +99,7 @@
   }
 
   function checkNavigation(reason) {
+    if (!isActive) return;
     const changed = location.href !== lastUrl;
     const largeSwap = mutationCount > 35;
     mutationCount = 0;
@@ -112,7 +117,8 @@
     if (window[OBSERVER_FLAG]) return;
     window[OBSERVER_FLAG] = true;
 
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
+      if (!isActive) return;
       for (const mutation of mutations) {
         mutationCount += mutation.addedNodes.length + mutation.removedNodes.length;
       }
@@ -132,26 +138,56 @@
       const originalReplaceState = history.replaceState;
       history.pushState = function () {
         const result = originalPushState.apply(this, arguments);
-        setTimeout(() => checkNavigation("pushState"), 0);
+        if (isActive) setTimeout(() => checkNavigation("pushState"), 0);
         return result;
       };
       history.replaceState = function () {
         const result = originalReplaceState.apply(this, arguments);
-        setTimeout(() => checkNavigation("replaceState"), 0);
+        if (isActive) setTimeout(() => checkNavigation("replaceState"), 0);
         return result;
       };
     } catch (_error) {
       // Some pages lock down history methods. Mutation and popstate detection still work.
     }
-    window.addEventListener("popstate", () => setTimeout(() => checkNavigation("popstate"), 0));
+    popstateHandler = () => {
+      if (isActive) setTimeout(() => checkNavigation("popstate"), 0);
+    };
+    window.addEventListener("popstate", popstateHandler);
   }
 
   function safeSendMessage(message) {
+    if (!isActive) return;
     try {
+      if (!chrome || !chrome.runtime || !chrome.runtime.id) {
+        deactivate();
+        return;
+      }
       const response = chrome.runtime.sendMessage(message);
-      if (response && typeof response.catch === "function") response.catch(() => {});
-    } catch (_error) {
+      if (response && typeof response.catch === "function") response.catch((error) => {
+        if (isExtensionContextError(error)) deactivate();
+      });
+    } catch (error) {
+      if (isExtensionContextError(error)) deactivate();
       // The extension context can disappear during reloads or extension updates.
+    }
+  }
+
+  function isExtensionContextError(error) {
+    return /extension context invalidated|context invalidated|extension context/i.test(String(error && error.message ? error.message : error));
+  }
+
+  function deactivate() {
+    if (!isActive) return;
+    isActive = false;
+    clearTimeout(timer);
+    timer = null;
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+    if (popstateHandler) {
+      window.removeEventListener("popstate", popstateHandler);
+      popstateHandler = null;
     }
   }
 
