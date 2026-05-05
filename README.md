@@ -1,3 +1,5 @@
+![Morphix Logo Banner](docs/branding/morphix_logo_banner.png)
+
 Morphix is a lightweight and versatile application designed to streamline and simplify your workflow. With its intuitive interface and robust features, Morphix helps you stay organized and focused on what matters most.
 
 Key Features:
