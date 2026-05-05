@@ -4,99 +4,99 @@
 
 **Restyle any website in seconds with a single prompt.**
 
-Soy **Arzuparreta**, músico apasionado por la tecnología y administrador de sistemas Linux. Morphix nació de una necesidad real: como alguien que pasa horas frente a pantallas configurando servidores, escribiendo código y creando música, necesitaba una forma rápida de adaptar la web a mi flujo de trabajo, sin perder tiempo editando CSS manualmente.
+I'm **Arzuparreta**, a musician passionate about technology and a Linux Systems Administrator. Morphix was born from a real need: as someone who spends hours in front of screens configuring servers, writing code, and creating music, I needed a fast way to adapt the web to my workflow without wasting time manually editing CSS.
 
-Con Morphix, simplemente abres la extensión, describes el cambio visual que quieres, y la IA genera el CSS/JavaScript necesario al instante. Es la unión perfecta entre **automatización de sistemas**, **inteligencia artificial** y **sentido estético musical**.
+With Morphix, you simply open the extension, describe the visual change you want, and the AI generates the necessary CSS/JavaScript instantly. It's the perfect union between **systems automation**, **artificial intelligence**, and **musical aesthetic sense**.
 
-## ✨ Qué hace
+## ✨ What it does
 
-- **Restyling por prompts**: Cambia la apariencia de cualquier web usando lenguaje natural.
-- **Contexto inteligente**: Extrae un resumen ligero de la página para que el modelo apunte a los elementos reales.
-- **Inyección dinámica**: Inserta CSS y JavaScript opcional cuando el CSS no basta.
-- **Revisión previa**: Visualiza los cambios antes de aplicarlos permanentemente.
-- **Gestión de estilos**: Guarda tus restyles para una sesión, una URL específica, un dominio entero, o en tu biblioteca personal.
-- **Múltiples proveedores IA**: Compatible con OpenRouter, Anthropic, OpenCode Go, Ollama y cualquier endpoint compatible con OpenAI.
+- **Prompt-based Restyling**: Change the appearance of any website using natural language.
+- **Smart Context**: Extracts a lightweight summary of the visible page so the model targets real elements.
+- **Dynamic Injection**: Injects CSS and optional JavaScript when CSS isn't enough.
+- **Live Preview**: Visualize changes before applying them permanently.
+- **Style Management**: Save your restyles for a session, a specific URL, an entire domain, or to your personal library.
+- **Multiple AI Providers**: Compatible with OpenRouter, Anthropic, OpenCode Go, Ollama, and any OpenAI-compatible endpoint.
 
-## 🚀 Instalación local
+## 🚀 Local Installation
 
-Este repositorio no requiere compilación. Es software libre (Open Source) porque creo en la privacidad y en el control del usuario sobre sus herramientas.
+This repository does not require a build step. It's free and open-source (FOSS) because I believe in privacy and user control over their tools.
 
-1. Clona o descarga el repositorio.
-2. Abre Chrome o cualquier navegador basado en Chromium.
-3. Ve a `chrome://extensions`.
-4. Activa el **Modo desarrollador**.
-5. Haz clic en **Cargar descomprimido**.
-6. Selecciona la carpeta `extension/` de este repositorio.
+1. Clone or download the repository.
+2. Open Chrome or any Chromium-based browser.
+3. Go to `chrome://extensions`.
+4. Turn on **Developer mode**.
+5. Click **Load unpacked**.
+6. Select the `extension/` folder from this repository.
 
-¡No olvides fijar **Morphix Restyle** en la barra de extensiones para acceso rápido!
+Don't forget to pin **Morphix Restyle** in the extensions menu for quick access!
 
-## ⚙️ Configura tu proveedor de IA
+## ⚙️ Setup your AI Provider
 
-1. Abre la página de opciones de la extensión.
-2. Elige un proveedor de IA.
-3. Introduce el modelo, la URL base, la API key y cualquier cabecera personalizada que requiera el proveedor.
-4. Haz clic en **Test provider** para verificar la conexión.
-5. Haz clic en **Save provider** para guardar.
+1. Open the extension options page.
+2. Choose a provider.
+3. Enter the model, base URL, API key, and any custom headers required by the provider.
+4. Click **Test provider** to verify the connection.
+5. Click **Save provider** to store it.
 
-La configuración por defecto es OpenRouter. Si usas proveedores locales como Ollama, puedes usarlo sin API key siempre que exponga un endpoint `/v1/chat/completions` compatible con OpenAI.
+The default provider configuration is OpenRouter. Local providers such as Ollama can be used without an API key if they expose an OpenAI-compatible `/v1/chat/completions` endpoint.
 
-## 🎯 Cómo usarlo
+## 🎯 How to use it
 
-1. Navega a cualquier web que quieras rediseñar.
-2. Abre Morphix Restyle desde la barra de herramientas.
-3. Escribe un prompt, por ejemplo:
+1. Visit any website you want to restyle.
+2. Open Morphix Restyle from the browser toolbar.
+3. Type a prompt, for example:
    - `Make this page calmer and easier to read.`
    - `Increase contrast and make buttons more obvious.`
    - `Hide distracting sidebars and widen the main article.`
-4. Haz clic en **Apply**.
-5. Revisa el resultado.
-6. Decide si mantenerlo para la sesión, la URL, el dominio o guardarlo en tu biblioteca.
+4. Click **Apply**.
+5. Review the result.
+6. Decide whether to keep it for the session, the URL, the domain, or save it to your library.
 
-Si el resultado no es el esperado, reintenta con el mismo prompt o descártalo y prueba uno más específico.
+If the result is not right, retry with the same prompt or discard it and try a more specific one.
 
-## 🛡️ Privacidad y Seguridad
+## 🛡️ Privacy & Security
 
-Como **SysAdmin**, la seguridad es mi prioridad. Morphix almacena la configuración del proveedor y los estilos guardados en el almacenamiento local de la extensión de Chrome. Tus API keys y ajustes nunca salen de tu navegador.
+As a **SysAdmin**, security is my priority. Morphix stores provider settings and saved styles in Chrome extension storage. Your API keys and settings never leave your browser.
 
-Cuando haces clic en **Apply**, Morphix envía al proveedor de IA seleccionado:
-- Tu prompt.
-- La URL y título de la página actual.
-- El tamaño de la ventana.
-- Un resumen compacto de los elementos visibles de la página (etiquetas, identificadores estables, fragmentos de texto y posiciones).
+When you click **Apply**, Morphix sends to the selected AI provider:
+- Your prompt.
+- The current page URL and title.
+- Viewport size.
+- A compact summary of visible page elements (tags, stable identifiers, text snippets, and positions).
 
-**Por diseño**, Morphix no envía el HTML completo de la página. Puedes ver exactamente qué contexto se envía en cada borrador bajo **What we sent** en el popup.
+**By design**, Morphix does not send the full page HTML. You can see exactly what context is sent in each draft under **What we sent** in the popup.
 
-## 🗂️ Estructura del proyecto
+## 🗂️ Project Layout
 
 ```text
 extension/
-  manifest.json                 Manifiesto de la extensión
-  background/service-worker.js   Gestión de mensajes, llamadas al proveedor, inyección de estilos
-  content/extract.js             Extracción de contexto visible de la página
-  content/inject.js              Inyección de estilos/scripts en tiempo de ejecución y manejo de rutas
-  options/                       UI de configuración de proveedores y biblioteca de estilos
-  popup/                         UI de prompts, previsualización y gestión de estilos
-  shared/                        Helpers para proveedores, prompts y almacenamiento
+  manifest.json                 Extension manifest
+  background/service-worker.js   Message handling, provider calls, style injection
+  content/extract.js             Visible page context extraction
+  content/inject.js              Runtime style/script injection and route handling
+  options/                       Provider settings and style library UI
+  popup/                         Prompt, preview, and keep/discard UI
+  shared/                        Providers, prompt, and storage helpers
 ```
 
-## 🌱 Estado del proyecto
+## 🌱 Project Status
 
-Morphix Restyle es una extensión temprana en fase local. Es normal encontrar imperfecciones, especialmente en sitios con políticas de seguridad estrictas (CSP), uso intensivo de Shadow DOM o layouts muy dinámicos.
+Morphix Restyle is an early local extension. Expect rough edges, especially on sites with strict Content Security Policies, heavy Shadow DOM usage, or very dynamic layouts.
 
-**Contribuciones y correcciones son bienvenidas**. Si te gusta la herramienta y quieres colaborar, ¡no dudes en abrir un issue o un pull request!
+**Contributions and fixes are welcome**. If you like the tool and want to collaborate, feel free to open an issue or a pull request!
 
-## 🎼 ¿Quién hay detrás?
+## 🎼 Who's behind this?
 
-Soy **Arzuparreta**, un músico que se metió en el mundo de los sistemas Linux y la automatización. Morphix es un reflejo de mi forma de trabajar: eficiente, creativa y un poco diferente a lo habitual.
+I'm **Arzuparreta**, a musician who got into the world of Linux systems and automation. Morphix is a reflection of my way of working: efficient, creative, and slightly different from the usual.
 
-- 🐧 **SysAdmin Linux**: Sé cómo mantener las cosas funcionando y seguras.
-- 🎵 **Músico**: Entiendo la importancia de la estética y el ritmo visual.
-- 🤖 **Builder IA**: Uso la IA para automatizar tareas sencillas y potenciar la creatividad.
+- 🐧 **Linux SysAdmin**: I know how to keep things running and secure.
+- 🎵 **Musician**: I understand the importance of aesthetics and visual rhythm.
+- 🤖 **AI Builder**: I use AI to automate simple tasks and boost creativity.
 
-Si te gusta mi trabajo, dale una ⭐ a este repo y sígueme para ver cómo construyo herramientas que mezclan estos mundos.
+If you like my work, give this repo a ⭐ and follow me to see how I build tools that mix these worlds.
 
 [![GitHub followers](https://img.shields.io/github/followers/Arzuparreta?label=Follow&style=social)](https://github.com/Arzuparreta)
 [![Twitter Follow](https://img.shields.io/twitter/follow/Arzuparreta?style=social)](https://twitter.com/Arzuparreta)
 
 ---
-*Construyendo en público - Linux, Música y Código.* 🚀
+*Building in public - Linux, Music, and Code.* 🚀
