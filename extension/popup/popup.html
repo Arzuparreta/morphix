@@ -13,7 +13,7 @@
           <span class="brand-mark" aria-hidden="true">M</span>
           <div>
             <p class="eyebrow">Morphix</p>
-            <h1>Restyle this page</h1>
+            <h1>Style workspace</h1>
           </div>
         </div>
         <button class="icon-button" id="options" type="button" aria-label="Open options" title="Options">
@@ -21,32 +21,57 @@
         </button>
       </header>
 
-      <section class="compose" id="compose">
-        <div class="site-card">
-          <span id="site-status" class="site-status">Checking this site...</span>
-        </div>
+      <section class="site-card">
+        <span id="site-status" class="site-status">Checking this site...</span>
+      </section>
 
-        <label for="prompt">What should change?</label>
-        <textarea id="prompt" rows="4" placeholder="Make this page feel calmer, premium, and easier to read."></textarea>
+      <section class="active-style hidden" id="active-style">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">Current style</p>
+            <h2 id="active-name">Untitled style</h2>
+          </div>
+          <span class="state-pill" id="active-state">Active</span>
+        </div>
+        <p class="description" id="active-description"></p>
+        <div class="compact-actions">
+          <button id="toggle-style" type="button">Pause</button>
+          <button id="delete-style" class="danger-button" type="button">Delete</button>
+          <button id="show-versions" type="button">Versions</button>
+        </div>
+        <div class="versions hidden" id="versions"></div>
+      </section>
+
+      <section class="compose" id="compose">
+        <label id="prompt-label" for="prompt">What should change?</label>
+        <textarea id="prompt" rows="4" placeholder="Make this page calmer, premium, and easier to read."></textarea>
 
         <div class="prompt-chips" aria-label="Prompt ideas">
           <button class="chip" type="button" data-prompt="Make this page calmer and easier to read.">Calmer</button>
-          <button class="chip" type="button" data-prompt="Give this page a premium Apple-inspired visual style.">Premium</button>
-          <button class="chip" type="button" data-prompt="Remove distractions and make the main content stand out.">Focus mode</button>
+          <button class="chip" type="button" data-prompt="Give this page a premium editorial style.">Premium</button>
+          <button class="chip" type="button" data-prompt="Remove distractions and make the main content stand out.">Focus</button>
           <button class="chip" type="button" data-prompt="Improve contrast, spacing, and button clarity.">Clarity</button>
         </div>
 
+        <fieldset class="scope-picker" id="scope-picker">
+          <legend>Keep as</legend>
+          <label><input type="radio" name="scope" value="session"> Session</label>
+          <label><input type="radio" name="scope" value="exact" checked> Page</label>
+          <label><input type="radio" name="scope" value="domain"> Site</label>
+          <label><input type="radio" name="scope" value="library"> Library</label>
+        </fieldset>
+
         <div class="bar">
-          <p class="hint">Preview the change first. Keep it only if it works.</p>
+          <p class="hint" id="compose-hint">Preview the style first. Keep it only if it works.</p>
           <button id="apply" type="button">
-            <span class="button-label">Restyle</span>
+            <span class="button-label">Preview</span>
           </button>
         </div>
       </section>
 
       <section class="status hidden" id="status" aria-live="polite"></section>
 
-      <section class="review hidden" id="review">
+      <section class="preview hidden" id="preview">
         <div class="review-header">
           <span class="success-dot" aria-hidden="true"></span>
           <div>
@@ -54,37 +79,14 @@
             <p class="description" id="description"></p>
           </div>
         </div>
-
+        <ul class="warnings hidden" id="warnings"></ul>
         <details class="sent">
           <summary>What Morphix sent to your provider</summary>
           <pre id="sent-context"></pre>
         </details>
-
-        <div class="actions" aria-label="Keep or discard restyle">
-          <button class="row primary-row" id="keep-url" type="button">
-            <span>Keep for this URL</span>
-            <small>Best for one page</small>
-          </button>
-          <button class="row" id="keep-domain" type="button">
-            <span>Keep for this domain</span>
-            <small>Use across this site</small>
-          </button>
-          <button class="row" id="keep-session" type="button">
-            <span>Keep for this session</span>
-            <small>Temporary preview</small>
-          </button>
-          <div class="library-save">
-            <input id="library-name" type="text" placeholder="Name this style">
-            <button class="row" id="save-library" type="button">
-              <span>Save</span>
-            </button>
-          </div>
-          <button class="row subtle" id="retry" type="button">
-            <span>Retry with same prompt</span>
-          </button>
-          <button class="row danger" id="different" type="button">
-            <span>Try a different prompt</span>
-          </button>
+        <div class="decision-actions">
+          <button class="primary-row" id="accept-draft" type="button">Apply style</button>
+          <button id="discard-draft" type="button">Discard preview</button>
         </div>
       </section>
     </main>

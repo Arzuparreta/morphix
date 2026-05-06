@@ -29,7 +29,7 @@
     savedConfig = response.providerConfig || {};
     renderProviderSelect();
     fillProviderForm(savedConfig);
-    renderLibrary(response.styles || []);
+    renderLibrary(response.projects || []);
   }
 
   function renderProviderSelect() {
@@ -112,15 +112,16 @@
     saveProviderEl.disabled = isBusy;
   }
 
-  function renderLibrary(styles) {
+  function renderLibrary(projects) {
     libraryEl.textContent = "";
-    libraryEl.classList.toggle("empty", !styles.length);
-    if (!styles.length) {
-      libraryEl.textContent = "No saved styles yet. Save a preview from the popup and it will appear here.";
+    libraryEl.classList.toggle("empty", !projects.length);
+    if (!projects.length) {
+      libraryEl.textContent = "No style workspaces yet. Create or save a preview from the popup and it will appear here.";
       return;
     }
 
-    for (const style of styles) {
+    for (const project of projects) {
+      const active = activeVersion(project);
       const item = document.createElement("article");
       item.className = "style-item";
 
@@ -131,35 +132,49 @@
       copy.className = "style-copy";
       const name = document.createElement("p");
       name.className = "style-name";
-      name.textContent = style.name;
+      name.textContent = project.name || "Untitled style";
       const meta = document.createElement("p");
-      meta.className = style.enabled === false ? "style-status library-only" : "style-status";
-      meta.textContent = style.enabled === false ? "library only" : "auto apply";
+      meta.className = project.enabled === false ? "style-status library-only" : "style-status";
+      meta.textContent = project.enabled === false ? "paused or library only" : "auto apply";
       copy.append(name, meta);
+
+      const actions = document.createElement("div");
+      actions.className = "style-actions";
+
+      const toggleButton = document.createElement("button");
+      toggleButton.type = "button";
+      toggleButton.textContent = project.enabled === false ? "Resume" : "Pause";
+      toggleButton.addEventListener("click", async () => {
+        const response = await send({ type: "RESTYLE_SET_PROJECT_ENABLED", id: project.id, enabled: project.enabled === false });
+        if (response.ok) renderLibrary(response.projects || []);
+      });
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "delete";
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
       deleteButton.addEventListener("click", async () => {
-        const response = await send({ type: "RESTYLE_DELETE_STYLE", id: style.id });
-        if (response.ok) renderLibrary(response.styles || []);
+        const response = await send({ type: "RESTYLE_DELETE_PROJECT", id: project.id });
+        if (response.ok) renderLibrary(response.projects || []);
       });
 
-      top.append(copy, deleteButton);
+      actions.append(toggleButton, deleteButton);
+      top.append(copy, actions);
       item.append(top);
-      item.append(createScopeEditor(style));
+      item.append(createScopeEditor(project));
 
-      if (style.description) {
+      if (active && active.description) {
         const description = document.createElement("p");
         description.className = "style-meta";
-        description.textContent = style.description;
+        description.textContent = active.description;
         item.append(description);
       }
 
-      if (style.css) {
+      item.append(createVersionList(project));
+
+      if (active && active.css) {
         const css = document.createElement("pre");
-        css.textContent = style.css;
+        css.textContent = active.css;
         item.append(css);
       }
 
@@ -167,7 +182,7 @@
     }
   }
 
-  function createScopeEditor(style) {
+  function createScopeEditor(project) {
     const scope = document.createElement("div");
     scope.className = "scope-editor";
 
@@ -177,19 +192,21 @@
 
     const type = document.createElement("select");
     type.className = "scope-type";
-    type.setAttribute("aria-label", `Scope type for ${style.name}`);
+    type.setAttribute("aria-label", `Scope type for ${project.name}`);
     type.append(
       createOption("exact", "This page"),
       createOption("domain", "Whole domain"),
-      createOption("regex", "Regex")
+      createOption("regex", "Regex"),
+      createOption("library", "Library only")
     );
-    type.value = style.url_pattern.type;
+    type.value = project.url_pattern.type;
 
     const value = document.createElement("input");
     value.className = "scope-value";
     value.type = "text";
-    value.value = style.url_pattern.value;
-    value.setAttribute("aria-label", `Scope value for ${style.name}`);
+    value.value = project.url_pattern.value;
+    value.setAttribute("aria-label", `Scope value for ${project.name}`);
+    value.disabled = project.url_pattern.type === "library";
 
     const save = document.createElement("button");
     save.className = "scope-save";
@@ -200,34 +217,64 @@
     status.className = "scope-status";
 
     type.addEventListener("change", () => {
-      value.value = suggestScopeValue(type.value, style.url_pattern.value);
+      value.value = suggestScopeValue(type.value, project.url_pattern.value);
+      value.disabled = type.value === "library";
     });
 
     save.addEventListener("click", async () => {
       const patch = {
         url_pattern: {
           type: type.value,
-          value: value.value.trim()
-        }
+          value: value.value.trim() || "library"
+        },
+        enabled: type.value === "library" ? false : project.enabled
       };
-      if (!patch.url_pattern.value) {
+      if (patch.url_pattern.type !== "library" && !patch.url_pattern.value) {
         status.textContent = "Enter a value";
         return;
       }
       status.textContent = "Saving...";
       save.disabled = true;
-      const response = await send({ type: "RESTYLE_UPDATE_STYLE", id: style.id, patch });
+      const response = await send({ type: "RESTYLE_UPDATE_PROJECT", id: project.id, patch });
       save.disabled = false;
       if (!response.ok) {
         status.textContent = response.error || "Could not save";
         return;
       }
       status.textContent = "Saved";
-      renderLibrary(response.styles || []);
+      renderLibrary(response.projects || []);
     });
 
     scope.append(label, type, value, save, status);
     return scope;
+  }
+
+  function createVersionList(project) {
+    const details = document.createElement("details");
+    details.className = "version-list";
+    const summary = document.createElement("summary");
+    const count = Array.isArray(project.versions) ? project.versions.length : 0;
+    summary.textContent = `${count} version${count === 1 ? "" : "s"}`;
+    details.append(summary);
+
+    (project.versions || []).forEach((version, index) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = version.id === project.active_version_id ? "version-row active" : "version-row";
+      row.textContent = `${index === 0 ? "Latest" : "Version " + (project.versions.length - index)} - ${version.description || version.prompt || "Style update"}`;
+      row.addEventListener("click", async () => {
+        const response = await send({ type: "RESTYLE_SET_ACTIVE_VERSION", id: project.id, versionId: version.id });
+        if (response.ok) renderLibrary(response.projects || []);
+      });
+      details.append(row);
+    });
+
+    return details;
+  }
+
+  function activeVersion(project) {
+    if (!project || !Array.isArray(project.versions)) return null;
+    return project.versions.find((version) => version.id === project.active_version_id) || project.versions[0] || null;
   }
 
   function createOption(value, label) {
@@ -238,7 +285,8 @@
   }
 
   function suggestScopeValue(nextType, currentValue) {
-    if (nextType !== "domain") return currentValue;
+    if (nextType === "library") return "library";
+    if (nextType !== "domain") return currentValue === "library" ? "" : currentValue;
     try {
       return new URL(currentValue).hostname.replace(/^www\./, "");
     } catch (_error) {

@@ -14,7 +14,8 @@ With Morphix, you simply open the extension, describe the visual change you want
 - **Smart Context**: Extracts a lightweight summary of the visible page so the model targets real elements.
 - **Dynamic Injection**: Injects CSS and optional JavaScript when CSS isn't enough.
 - **Live Preview**: Visualize changes before applying them permanently.
-- **Style Management**: Save your restyles for a session, a specific URL, an entire domain, or to your personal library.
+- **Style Workspaces**: Every saved restyle becomes an editable project with versions, conversation context, pause/delete controls, and rollback.
+- **Style Management**: Keep styles for a session, a specific URL, an entire domain, or as a paused library-only style.
 - **Multiple AI Providers**: Compatible with OpenRouter, Anthropic, OpenCode Go, Ollama, and any OpenAI-compatible endpoint.
 
 ## 🚀 Local Installation
@@ -50,9 +51,10 @@ The default provider configuration is OpenRouter. Local providers such as Ollama
    - `Hide distracting sidebars and widen the main article.`
 4. Click **Apply**.
 5. Review the result.
-6. Decide whether to keep it for the session, the URL, the domain, or save it to your library.
+6. Decide whether to keep it for the session, the page, the site, or your library.
+7. Reopen Morphix later to refine, pause, delete, or roll back the active style.
 
-If the result is not right, retry with the same prompt or discard it and try a more specific one.
+If the result is not right, discard the preview or keep prompting over the active style. Morphix sends the active style and recent style history when you refine, so the model edits what already exists instead of starting from scratch.
 
 ## 🛡️ Privacy & Security
 
@@ -65,6 +67,8 @@ When you click **Apply**, Morphix sends to the selected AI provider:
 - A compact summary of visible page elements (tags, stable identifiers, text snippets, and positions).
 
 **By design**, Morphix does not send the full page HTML. You can see exactly what context is sent in each draft under **What we sent** in the popup.
+
+When refining a saved style, Morphix also sends the current injected CSS/JavaScript and recent style conversation so the provider can make a targeted update. Generated JavaScript is flagged in the preview before you keep it.
 
 ## 🗂️ Project Layout
 

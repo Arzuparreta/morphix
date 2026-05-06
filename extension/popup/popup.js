@@ -1,28 +1,43 @@
 (function () {
   const promptEl = document.getElementById("prompt");
+  const promptLabelEl = document.getElementById("prompt-label");
   const applyEl = document.getElementById("apply");
   const statusEl = document.getElementById("status");
-  const reviewEl = document.getElementById("review");
+  const previewEl = document.getElementById("preview");
   const descriptionEl = document.getElementById("description");
   const sentContextEl = document.getElementById("sent-context");
+  const warningsEl = document.getElementById("warnings");
   const siteStatusEl = document.getElementById("site-status");
-  const libraryNameEl = document.getElementById("library-name");
   const optionsEl = document.getElementById("options");
+  const activeStyleEl = document.getElementById("active-style");
+  const activeNameEl = document.getElementById("active-name");
+  const activeDescriptionEl = document.getElementById("active-description");
+  const activeStateEl = document.getElementById("active-state");
+  const toggleStyleEl = document.getElementById("toggle-style");
+  const deleteStyleEl = document.getElementById("delete-style");
+  const showVersionsEl = document.getElementById("show-versions");
+  const versionsEl = document.getElementById("versions");
+  const scopePickerEl = document.getElementById("scope-picker");
+  const composeHintEl = document.getElementById("compose-hint");
+  const acceptDraftEl = document.getElementById("accept-draft");
+  const discardDraftEl = document.getElementById("discard-draft");
 
   let activeTab = null;
   let currentDraft = null;
+  let activeProjects = [];
+  let pageProjects = [];
+  let currentProject = null;
 
   document.addEventListener("DOMContentLoaded", init);
-  applyEl.addEventListener("click", applyPrompt);
+  applyEl.addEventListener("click", createPreview);
+  acceptDraftEl.addEventListener("click", acceptDraft);
+  discardDraftEl.addEventListener("click", discardDraft);
+  toggleStyleEl.addEventListener("click", toggleActiveStyle);
+  deleteStyleEl.addEventListener("click", deleteActiveStyle);
+  showVersionsEl.addEventListener("click", toggleVersions);
   document.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => applyPromptChip(chip.dataset.prompt || chip.textContent));
   });
-  document.getElementById("keep-url").addEventListener("click", () => keepSaved("url"));
-  document.getElementById("keep-domain").addEventListener("click", () => keepSaved("domain"));
-  document.getElementById("keep-session").addEventListener("click", keepSession);
-  document.getElementById("save-library").addEventListener("click", () => keepSaved("url", libraryNameEl.value.trim(), true));
-  document.getElementById("retry").addEventListener("click", retryPrompt);
-  document.getElementById("different").addEventListener("click", tryDifferentPrompt);
   optionsEl.addEventListener("click", (event) => {
     event.preventDefault();
     chrome.runtime.openOptionsPage();
@@ -37,29 +52,94 @@
       applyEl.disabled = true;
       return;
     }
-
-    const { pending_draft } = await chrome.storage.local.get("pending_draft");
-    if (pending_draft) {
-      currentDraft = pending_draft;
-      descriptionEl.textContent = currentDraft.description;
-      sentContextEl.textContent = JSON.stringify(currentDraft.pageContext, null, 2);
-      libraryNameEl.value = defaultName(currentDraft);
-      statusEl.classList.add("hidden");
-      reviewEl.classList.remove("hidden");
-    }
-
-    const response = await send({ type: "RESTYLE_GET_PAGE_STATE", url: activeTab.url });
-    if (response.ok && response.count > 0) {
-      setSiteStatus(`${response.count} saved restyle${response.count === 1 ? "" : "s"} active for this page`);
-    } else {
-      setSiteStatus("No saved restyles for this page");
-    }
+    await loadPageState();
   }
 
-  async function applyPrompt() {
+  async function loadPageState() {
+    const response = await send({ type: "RESTYLE_GET_PAGE_STATE", tabId: activeTab.id, url: activeTab.url });
+    if (!response.ok) {
+      showStatus(response.error || "Could not read page state", true);
+      return;
+    }
+
+    activeProjects = response.activeProjects || [];
+    pageProjects = response.pageProjects || activeProjects;
+    currentProject = activeProjects[0] || pageProjects[0] || null;
+    currentDraft = response.draft || null;
+    render();
+  }
+
+  function render() {
+    const activeCount = activeProjects.length;
+    setSiteStatus(activeCount
+      ? `${activeCount} style${activeCount === 1 ? "" : "s"} active on this page`
+      : "No active style on this page");
+
+    renderActiveProject();
+    renderDraft();
+
+    const isRefining = Boolean(currentProject);
+    promptLabelEl.textContent = isRefining ? "Refine this style" : "What should change?";
+    applyEl.querySelector(".button-label").textContent = isRefining ? "Preview update" : "Preview";
+    composeHintEl.textContent = isRefining
+      ? "Your prompt edits the active style and keeps version history."
+      : "Preview the style first. Keep it only if it works.";
+    scopePickerEl.classList.toggle("hidden", isRefining);
+  }
+
+  function renderActiveProject() {
+    activeStyleEl.classList.toggle("hidden", !currentProject);
+    if (!currentProject) {
+      versionsEl.classList.add("hidden");
+      return;
+    }
+
+    const activeVersion = currentProject.activeVersion || firstVersion(currentProject);
+    activeNameEl.textContent = currentProject.name || activeVersion.description || "Untitled style";
+    activeDescriptionEl.textContent = activeVersion.description || "This page has a saved Morphix style.";
+    activeStateEl.textContent = currentProject.enabled === false ? "Paused" : "Active";
+    activeStateEl.classList.toggle("paused", currentProject.enabled === false);
+    toggleStyleEl.textContent = currentProject.enabled === false ? "Resume" : "Pause";
+    renderVersions();
+  }
+
+  function renderVersions() {
+    versionsEl.textContent = "";
+    if (!currentProject || !Array.isArray(currentProject.versions)) return;
+    currentProject.versions.forEach((version, index) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = version.id === currentProject.active_version_id ? "version-row active" : "version-row";
+      row.textContent = `${index === 0 ? "Latest" : "Version " + (currentProject.versions.length - index)} - ${version.description || version.prompt || "Style update"}`;
+      row.addEventListener("click", () => restoreVersion(version.id));
+      versionsEl.append(row);
+    });
+  }
+
+  function renderDraft() {
+    previewEl.classList.toggle("hidden", !currentDraft);
+    if (!currentDraft) return;
+    descriptionEl.textContent = currentDraft.description || "Preview generated.";
+    sentContextEl.textContent = JSON.stringify(currentDraft.pageContext, null, 2);
+    acceptDraftEl.textContent = currentDraft.projectId ? "Apply update" : "Keep style";
+    renderWarnings(currentDraft.validation);
+  }
+
+  function renderWarnings(validation) {
+    const warnings = validation && Array.isArray(validation.warnings) ? validation.warnings : [];
+    warningsEl.textContent = "";
+    warningsEl.classList.toggle("hidden", !warnings.length);
+    warnings.forEach((warning) => {
+      const item = document.createElement("li");
+      item.textContent = warning;
+      warningsEl.append(item);
+    });
+  }
+
+  async function createPreview() {
     const prompt = promptEl.value.trim();
     if (!prompt) {
-      showStatus("Enter a restyle prompt first", true);
+      showStatus(currentProject ? "Describe how to refine this style first" : "Enter a restyle prompt first", true);
       return;
     }
     if (!activeTab || !activeTab.id) {
@@ -67,104 +147,131 @@
       return;
     }
 
-    setBusy(true, "Reading this page and building a preview...");
-    reviewEl.classList.add("hidden");
+    setBusy(true, currentProject ? "Refining the active style..." : "Reading this page and building a preview...");
+    previewEl.classList.add("hidden");
 
     const response = await send({
-      type: "RESTYLE_APPLY_REQUEST",
+      type: "RESTYLE_CREATE_DRAFT",
       tabId: activeTab.id,
+      projectId: currentProject && currentProject.id,
       prompt
     });
 
     setBusy(false);
     if (!response.ok) {
-      showStatus(response.error || "Could not apply restyle", true);
+      showStatus(response.error || "Could not create preview", true);
       return;
     }
 
     currentDraft = response.draft;
-    descriptionEl.textContent = currentDraft.description;
-    sentContextEl.textContent = JSON.stringify(currentDraft.pageContext, null, 2);
-    libraryNameEl.value = defaultName(currentDraft);
     statusEl.classList.add("hidden");
-    reviewEl.classList.remove("hidden");
+    render();
   }
 
-  async function keepSaved(scope, name, libraryOnly) {
+  async function acceptDraft() {
     if (!currentDraft) return;
-    setBusy(true, "Saving restyle...");
+    setBusy(true, currentDraft.projectId ? "Applying update..." : "Saving style...");
     const response = await send({
-      type: "RESTYLE_KEEP_SAVED",
+      type: "RESTYLE_ACCEPT_DRAFT",
       tabId: activeTab.id,
-      scope,
-      name: name || currentDraft.description,
-      libraryOnly: Boolean(libraryOnly),
-      draft: currentDraft
+      draft: currentDraft,
+      scope: selectedScope()
     });
     setBusy(false);
     if (!response.ok) {
-      showStatus(response.error || "Could not save restyle", true);
+      showStatus(response.error || "Could not apply style", true);
       return;
     }
-    currentDraft = null;
-    reviewEl.classList.add("hidden");
-    showStatus(libraryOnly ? "Restyle saved to the library." : "Restyle saved and applied.");
-    if (!libraryOnly) setSiteStatus("Saved restyle active for this page");
-  }
 
-  async function keepSession() {
-    if (!currentDraft) return;
-    setBusy(true, "Keeping for this session...");
-    const response = await send({
-      type: "RESTYLE_KEEP_SESSION",
-      tabId: activeTab.id,
-      draft: currentDraft
-    });
-    setBusy(false);
-    if (!response.ok) {
-      showStatus(response.error || "Could not keep session restyle", true);
-      return;
-    }
-    currentDraft = null;
-    reviewEl.classList.add("hidden");
-    showStatus("Restyle will stay for this session.");
-  }
-
-  async function retryPrompt() {
-    if (!currentDraft) return;
-    await discardDraft(false);
-    applyPrompt();
-  }
-
-  async function tryDifferentPrompt() {
-    await discardDraft(true);
     promptEl.value = "";
-    promptEl.focus();
+    currentDraft = null;
+    showStatus(response.project && response.project.enabled === false
+      ? "Style saved to the library."
+      : "Style applied.");
+    await loadPageState();
   }
 
-  async function discardDraft(clearReview) {
+  async function discardDraft() {
     if (!currentDraft) return;
-    await send({
+    setBusy(true, "Discarding preview...");
+    const response = await send({
       type: "RESTYLE_DISCARD_DRAFT",
       tabId: activeTab.id,
       draftId: currentDraft.id
     });
-    await chrome.storage.local.remove("pending_draft");
-    currentDraft = null;
-    if (clearReview) {
-      reviewEl.classList.add("hidden");
-      showStatus("Draft discarded.");
+    setBusy(false);
+    if (!response.ok) {
+      showStatus(response.error || "Could not discard preview", true);
+      return;
     }
+    currentDraft = null;
+    showStatus("Preview discarded.");
+    await loadPageState();
+  }
+
+  async function toggleActiveStyle() {
+    if (!currentProject) return;
+    const nextEnabled = currentProject.enabled === false;
+    setBusy(true, nextEnabled ? "Resuming style..." : "Pausing style...");
+    const response = await send({
+      type: "RESTYLE_SET_PROJECT_ENABLED",
+      tabId: activeTab.id,
+      id: currentProject.id,
+      enabled: nextEnabled
+    });
+    setBusy(false);
+    if (!response.ok) {
+      showStatus(response.error || "Could not update style", true);
+      return;
+    }
+    showStatus(nextEnabled ? "Style resumed." : "Style paused.");
+    await loadPageState();
+  }
+
+  async function deleteActiveStyle() {
+    if (!currentProject) return;
+    setBusy(true, "Deleting style...");
+    const response = await send({
+      type: "RESTYLE_DELETE_PROJECT",
+      tabId: activeTab.id,
+      id: currentProject.id
+    });
+    setBusy(false);
+    if (!response.ok) {
+      showStatus(response.error || "Could not delete style", true);
+      return;
+    }
+    currentProject = null;
+    showStatus("Style deleted.");
+    await loadPageState();
+  }
+
+  async function restoreVersion(versionId) {
+    if (!currentProject) return;
+    setBusy(true, "Restoring version...");
+    const response = await send({
+      type: "RESTYLE_SET_ACTIVE_VERSION",
+      tabId: activeTab.id,
+      id: currentProject.id,
+      versionId
+    });
+    setBusy(false);
+    if (!response.ok) {
+      showStatus(response.error || "Could not restore version", true);
+      return;
+    }
+    showStatus("Version restored.");
+    await loadPageState();
+  }
+
+  function toggleVersions() {
+    versionsEl.classList.toggle("hidden");
   }
 
   function setBusy(isBusy, message) {
     document.body.classList.toggle("is-busy", isBusy);
-    applyEl.disabled = isBusy;
-    document.querySelectorAll(".row").forEach((button) => {
-      button.disabled = isBusy;
-    });
-    document.querySelectorAll(".chip").forEach((button) => {
-      button.disabled = isBusy;
+    document.querySelectorAll("button, input, textarea").forEach((element) => {
+      element.disabled = isBusy;
     });
     if (message) showStatus(message);
   }
@@ -179,8 +286,13 @@
     siteStatusEl.textContent = message;
   }
 
-  function defaultName(draft) {
-    return (draft.description || draft.prompt || "Saved restyle").slice(0, 70);
+  function selectedScope() {
+    const checked = document.querySelector('input[name="scope"]:checked');
+    return checked ? checked.value : "exact";
+  }
+
+  function firstVersion(project) {
+    return project && Array.isArray(project.versions) && project.versions[0] ? project.versions[0] : {};
   }
 
   function applyPromptChip(text) {

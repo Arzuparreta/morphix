@@ -44,10 +44,7 @@
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(31, 182, 255, 0.34), transparent 34%),
-    radial-gradient(circle at 100% 12%, rgba(23, 107, 255, 0.22), transparent 30%),
-    linear-gradient(145deg, var(--bg), color-mix(in srgb, var(--bg) 76%, #ffffff));
+  background: linear-gradient(145deg, var(--bg), color-mix(in srgb, var(--bg) 76%, #ffffff));
   color: var(--fg);
   font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
@@ -304,6 +301,13 @@ a:hover {
   gap: 16px;
 }
 
+.style-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .style-copy {
   min-width: 0;
 }
@@ -369,6 +373,32 @@ a:hover {
 .delete {
   flex: 0 0 auto;
   color: var(--danger);
+}
+
+.version-list {
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.version-list summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.version-row {
+  width: 100%;
+  display: block;
+  margin-top: 8px;
+  text-align: left;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.version-row.active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--glass-strong));
+  color: var(--fg);
 }
 
 pre {
