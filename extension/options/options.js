@@ -114,12 +114,11 @@
 
   function renderLibrary(styles) {
     libraryEl.textContent = "";
+    libraryEl.classList.toggle("empty", !styles.length);
     if (!styles.length) {
-      libraryEl.textContent = "No saved styles yet.";
-      libraryEl.classList.add("muted");
+      libraryEl.textContent = "No saved styles yet. Save a preview from the popup and it will appear here.";
       return;
     }
-    libraryEl.classList.remove("muted");
 
     for (const style of styles) {
       const item = document.createElement("article");
@@ -129,11 +128,12 @@
       top.className = "style-top";
 
       const copy = document.createElement("div");
+      copy.className = "style-copy";
       const name = document.createElement("p");
       name.className = "style-name";
       name.textContent = style.name;
       const meta = document.createElement("p");
-      meta.className = "style-meta";
+      meta.className = style.enabled === false ? "style-status library-only" : "style-status";
       meta.textContent = style.enabled === false ? "library only" : "auto apply";
       copy.append(name, meta);
 

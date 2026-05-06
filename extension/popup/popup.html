@@ -8,42 +8,78 @@
   </head>
   <body>
     <main class="popup">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">M</span>
+          <div>
+            <p class="eyebrow">Morphix</p>
+            <h1>Restyle this page</h1>
+          </div>
+        </div>
+        <button class="icon-button" id="options" type="button" aria-label="Open options" title="Options">
+          <span aria-hidden="true">...</span>
+        </button>
+      </header>
+
       <section class="compose" id="compose">
-        <label class="sr-only" for="prompt">Restyle prompt</label>
-        <textarea id="prompt" rows="3" placeholder="Describe a change for this page"></textarea>
-        <div class="bar">
+        <div class="site-card">
           <span id="site-status" class="site-status">Checking this site...</span>
-          <button id="apply" type="button">Apply</button>
+        </div>
+
+        <label for="prompt">What should change?</label>
+        <textarea id="prompt" rows="4" placeholder="Make this page feel calmer, premium, and easier to read."></textarea>
+
+        <div class="prompt-chips" aria-label="Prompt ideas">
+          <button class="chip" type="button" data-prompt="Make this page calmer and easier to read.">Calmer</button>
+          <button class="chip" type="button" data-prompt="Give this page a premium Apple-inspired visual style.">Premium</button>
+          <button class="chip" type="button" data-prompt="Remove distractions and make the main content stand out.">Focus mode</button>
+          <button class="chip" type="button" data-prompt="Improve contrast, spacing, and button clarity.">Clarity</button>
+        </div>
+
+        <div class="bar">
+          <p class="hint">Preview the change first. Keep it only if it works.</p>
+          <button id="apply" type="button">
+            <span class="button-label">Restyle</span>
+          </button>
         </div>
       </section>
 
       <section class="status hidden" id="status" aria-live="polite"></section>
 
       <section class="review hidden" id="review">
-        <p class="description" id="description"></p>
+        <div class="review-header">
+          <span class="success-dot" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Preview ready</p>
+            <p class="description" id="description"></p>
+          </div>
+        </div>
 
         <details class="sent">
-          <summary>What we sent</summary>
+          <summary>What Morphix sent to your provider</summary>
           <pre id="sent-context"></pre>
         </details>
 
         <div class="actions" aria-label="Keep or discard restyle">
-          <button class="row" id="keep-url" type="button">
-            <span>Apply every time on this URL</span>
+          <button class="row primary-row" id="keep-url" type="button">
+            <span>Keep for this URL</span>
+            <small>Best for one page</small>
           </button>
           <button class="row" id="keep-domain" type="button">
-            <span>Apply every time on this domain</span>
+            <span>Keep for this domain</span>
+            <small>Use across this site</small>
           </button>
           <button class="row" id="keep-session" type="button">
-            <span>Apply only this session</span>
+            <span>Keep for this session</span>
+            <small>Temporary preview</small>
           </button>
           <div class="library-save">
-            <input id="library-name" type="text" placeholder="Library name">
+            <input id="library-name" type="text" placeholder="Name this style">
             <button class="row" id="save-library" type="button">
-              <span>Save to library</span>
+              <span>Save</span>
             </button>
           </div>
-          <button class="row danger" id="retry" type="button">
+          <button class="row subtle" id="retry" type="button">
             <span>Retry with same prompt</span>
           </button>
           <button class="row danger" id="different" type="button">
@@ -51,10 +87,6 @@
           </button>
         </div>
       </section>
-
-      <footer>
-        <a href="#" id="options">Options</a>
-      </footer>
     </main>
     <script src="popup.js"></script>
   </body>

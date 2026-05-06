@@ -7,10 +7,24 @@
     <link rel="stylesheet" href="options.css">
   </head>
   <body>
-    <main>
-      <section>
-        <h1>Morphix Options</h1>
-        <p class="muted">Provider settings and keys are stored locally in Chrome. Page context is sent only to the provider you choose when you click Apply.</p>
+    <main class="shell">
+      <header class="hero">
+        <div class="brand-mark" aria-hidden="true">M</div>
+        <div>
+          <p class="eyebrow">Morphix</p>
+          <h1>Restyle control center</h1>
+          <p class="muted">Tune your AI provider and manage the styles Morphix applies across the web.</p>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Provider</p>
+            <h2>AI connection</h2>
+          </div>
+          <p class="privacy-note">Keys stay in Chrome storage. Page context is sent only when you click Restyle.</p>
+        </div>
 
         <label for="provider">AI provider</label>
         <select id="provider"></select>
@@ -53,8 +67,14 @@
         <p id="provider-status" class="muted" aria-live="polite"></p>
       </section>
 
-      <section>
-        <h2>Style Library</h2>
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Library</p>
+            <h2>Saved styles</h2>
+          </div>
+          <p class="privacy-note">Review scope, update targeting, or remove styles you no longer use.</p>
+        </div>
         <div id="library" class="library"></div>
       </section>
     </main>
