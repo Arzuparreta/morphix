@@ -15,8 +15,11 @@
   --accent-fg: #ffffff;
   --danger: #c5332b;
   --success: #26c281;
-  --shadow: 0 18px 46px rgba(37, 54, 92, 0.18);
-  --soft-shadow: 0 10px 24px rgba(37, 54, 92, 0.1);
+  --radius-shell: 18px;
+  --radius-control: 12px;
+  --radius-tight: 10px;
+  --shadow: 0 18px 44px rgba(37, 54, 92, 0.18);
+  --soft-shadow: 0 8px 20px rgba(37, 54, 92, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,12 +49,9 @@
 
 body {
   width: 410px;
-  min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 16% -8%, rgba(31, 182, 255, 0.38), transparent 34%),
-    radial-gradient(circle at 96% 4%, rgba(23, 107, 255, 0.24), transparent 30%),
-    linear-gradient(145deg, var(--bg), color-mix(in srgb, var(--bg) 74%, #ffffff));
+  padding: 8px;
+  background: transparent;
   color: var(--fg);
   font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
@@ -61,7 +61,9 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 42%);
+  background:
+    linear-gradient(145deg, var(--bg), color-mix(in srgb, var(--bg) 78%, #ffffff)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 42%);
 }
 
 button,
@@ -79,6 +81,12 @@ button {
   display: grid;
   gap: 14px;
   padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-shell);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(1.18);
 }
 
 .topbar {
@@ -102,7 +110,7 @@ button {
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.46);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.42)),
     linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -138,40 +146,58 @@ h1 {
 }
 
 .icon-button {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--glass);
+  border-radius: var(--radius-control);
+  background: var(--glass-strong);
   color: var(--muted);
   box-shadow: var(--soft-shadow);
   cursor: pointer;
 }
 
-.icon-button span {
-  transform: translateY(-3px);
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1;
+.option-dots,
+.option-dots::before,
+.option-dots::after {
+  width: 4px;
+  height: 4px;
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.option-dots {
+  position: relative;
+}
+
+.option-dots::before,
+.option-dots::after {
+  content: "";
+  position: absolute;
+  top: 0;
+}
+
+.option-dots::before {
+  left: -7px;
+}
+
+.option-dots::after {
+  right: -7px;
+}
+
+.status {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--glass-strong) 72%, transparent);
 }
 
 .compose,
-.review,
-.status {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--glass);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(22px) saturate(1.25);
-}
-
-.compose {
+.review {
   display: grid;
   gap: 12px;
-  padding: 14px;
 }
 
 .site-card {
@@ -179,10 +205,10 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 10px;
+  padding: 10px 11px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.36);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--field) 74%, transparent);
 }
 
 .site-card::before {
@@ -216,7 +242,7 @@ textarea {
   min-height: 126px;
   resize: vertical;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   padding: 14px;
   background: var(--field);
   color: var(--fg);
@@ -248,8 +274,8 @@ summary:focus-visible {
 .chip {
   min-height: 30px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-tight);
+  background: color-mix(in srgb, var(--field) 72%, transparent);
   color: var(--muted);
   padding: 6px 10px;
   font-size: 12px;
@@ -281,7 +307,7 @@ summary:focus-visible {
   min-width: 104px;
   min-height: 42px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-fg);
   padding: 10px 16px;
@@ -318,7 +344,7 @@ body.is-busy #apply .button-label::after {
 }
 
 .status {
-  padding: 11px 12px;
+  padding: 12px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -327,12 +353,6 @@ body.is-busy #apply .button-label::after {
   border-color: color-mix(in srgb, var(--danger) 42%, var(--line));
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 9%, var(--glass));
-}
-
-.review {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
 }
 
 .review-header {
@@ -374,7 +394,7 @@ pre {
   margin: 9px 0 0;
   padding: 11px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--field) 86%, var(--bg));
   color: var(--fg);
   font-size: 11px;
@@ -394,7 +414,7 @@ pre {
   justify-content: space-between;
   gap: 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--glass-strong);
   color: var(--fg);
   padding: 10px 11px;
@@ -435,7 +455,7 @@ pre {
 .library-save input {
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--field);
   color: var(--fg);
   padding: 0 11px;
