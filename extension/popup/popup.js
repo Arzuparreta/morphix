@@ -14,6 +14,9 @@
 
   document.addEventListener("DOMContentLoaded", init);
   applyEl.addEventListener("click", applyPrompt);
+  document.querySelectorAll(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => applyPromptChip(chip.dataset.prompt || chip.textContent));
+  });
   document.getElementById("keep-url").addEventListener("click", () => keepSaved("url"));
   document.getElementById("keep-domain").addEventListener("click", () => keepSaved("domain"));
   document.getElementById("keep-session").addEventListener("click", keepSession);
@@ -31,6 +34,7 @@
     activeTab = tabs[0];
     if (!activeTab || !activeTab.url) {
       setSiteStatus("No page selected");
+      applyEl.disabled = true;
       return;
     }
     const response = await send({ type: "RESTYLE_GET_PAGE_STATE", url: activeTab.url });
@@ -47,8 +51,12 @@
       showStatus("Enter a restyle prompt first", true);
       return;
     }
+    if (!activeTab || !activeTab.id) {
+      showStatus("Open a page before restyling.", true);
+      return;
+    }
 
-    setBusy(true, "Extracting visible page context...");
+    setBusy(true, "Reading this page and building a preview...");
     reviewEl.classList.add("hidden");
 
     const response = await send({
@@ -138,8 +146,12 @@
   }
 
   function setBusy(isBusy, message) {
+    document.body.classList.toggle("is-busy", isBusy);
     applyEl.disabled = isBusy;
     document.querySelectorAll(".row").forEach((button) => {
+      button.disabled = isBusy;
+    });
+    document.querySelectorAll(".chip").forEach((button) => {
       button.disabled = isBusy;
     });
     if (message) showStatus(message);
@@ -157,6 +169,14 @@
 
   function defaultName(draft) {
     return (draft.description || draft.prompt || "Saved restyle").slice(0, 70);
+  }
+
+  function applyPromptChip(text) {
+    const next = String(text || "").trim();
+    if (!next) return;
+    const current = promptEl.value.trim();
+    promptEl.value = current ? `${current}\n${next}` : next;
+    promptEl.focus();
   }
 
   function send(message) {
