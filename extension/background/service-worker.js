@@ -19,6 +19,7 @@ async function handleMessage(message, sender) {
 
   if (message.type === "RESTYLE_DISCARD_DRAFT") {
     await removeInjectedStyle(message.tabId, message.draftId);
+    await chrome.storage.local.remove("pending_draft");
     return { ok: true };
   }
 
@@ -91,6 +92,9 @@ async function createDraftRestyle(tabId, prompt) {
   if (!tabId) throw new Error("No active tab found");
   if (!prompt || !prompt.trim()) throw new Error("Enter a restyle prompt first");
 
+  const { pending_draft: oldDraft } = await chrome.storage.local.get("pending_draft");
+  if (oldDraft) await removeInjectedStyle(tabId, oldDraft.id).catch(() => {});
+
   await enableCspBypassForTab(tabId);
   await ensureContentScript(tabId, "/content/extract.js");
   await ensureContentScript(tabId, "/content/inject.js");
@@ -114,6 +118,7 @@ async function createDraftRestyle(tabId, prompt) {
   };
 
   await injectPayload(tabId, draft);
+  await chrome.storage.local.set({ pending_draft: draft });
   return { ok: true, draft };
 }
 
@@ -287,6 +292,7 @@ async function keepSaved(message) {
 
   await removeInjectedStyle(message.tabId, message.draft.id);
   await injectPayload(message.tabId, saved);
+  await chrome.storage.local.remove("pending_draft");
   return { ok: true, style: saved };
 }
 
@@ -303,6 +309,7 @@ async function keepSession(message) {
 
   await removeInjectedStyle(message.tabId, message.draft.id);
   await injectPayload(message.tabId, saved);
+  await chrome.storage.local.remove("pending_draft");
   return { ok: true, style: saved };
 }
 
