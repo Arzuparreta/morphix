@@ -37,6 +37,17 @@
       applyEl.disabled = true;
       return;
     }
+
+    const { pending_draft } = await chrome.storage.local.get("pending_draft");
+    if (pending_draft) {
+      currentDraft = pending_draft;
+      descriptionEl.textContent = currentDraft.description;
+      sentContextEl.textContent = JSON.stringify(currentDraft.pageContext, null, 2);
+      libraryNameEl.value = defaultName(currentDraft);
+      statusEl.classList.add("hidden");
+      reviewEl.classList.remove("hidden");
+    }
+
     const response = await send({ type: "RESTYLE_GET_PAGE_STATE", url: activeTab.url });
     if (response.ok && response.count > 0) {
       setSiteStatus(`${response.count} saved restyle${response.count === 1 ? "" : "s"} active for this page`);
@@ -138,6 +149,7 @@
       tabId: activeTab.id,
       draftId: currentDraft.id
     });
+    await chrome.storage.local.remove("pending_draft");
     currentDraft = null;
     if (clearReview) {
       reviewEl.classList.add("hidden");
