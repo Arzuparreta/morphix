@@ -13,11 +13,8 @@
   --accent-2: #1fb6ff;
   --danger: #c5332b;
   --success: #22b879;
-  --radius-shell: 18px;
-  --radius-control: 12px;
-  --radius-tight: 10px;
-  --shadow: 0 20px 52px rgba(37, 54, 92, 0.14);
-  --soft-shadow: 0 8px 20px rgba(37, 54, 92, 0.09);
+  --shadow: 0 22px 62px rgba(37, 54, 92, 0.15);
+  --soft-shadow: 0 10px 24px rgba(37, 54, 92, 0.09);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,7 +54,7 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 42%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 42%);
 }
 
 .shell {
@@ -68,17 +65,13 @@ body::before {
   gap: 18px;
 }
 
-.hero {
+.hero,
+.panel {
   border: 1px solid var(--line);
-  border-radius: var(--radius-shell);
+  border-radius: 8px;
   background: var(--glass);
   box-shadow: var(--shadow);
   backdrop-filter: blur(24px) saturate(1.2);
-}
-
-.panel {
-  border-top: 1px solid var(--line);
-  padding: 24px 0 0;
 }
 
 .hero {
@@ -95,7 +88,7 @@ body::before {
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.46);
-  border-radius: var(--radius-control);
+  border-radius: 8px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.42)),
     linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -112,6 +105,10 @@ body::before {
       linear-gradient(135deg, rgba(79, 140, 255, 0.8), rgba(70, 209, 255, 0.36));
     color: #ffffff;
   }
+}
+
+.panel {
+  padding: 22px;
 }
 
 .section-heading {
@@ -189,7 +186,7 @@ select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
+  border-radius: 8px;
   padding: 11px 12px;
   background: var(--field);
   color: var(--fg);
@@ -219,7 +216,7 @@ a:focus-visible {
 button {
   min-height: 40px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
+  border-radius: 8px;
   background: var(--glass-strong);
   color: var(--fg);
   padding: 9px 13px;
@@ -283,15 +280,15 @@ a:hover {
   display: grid;
   place-items: center;
   border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--field) 58%, transparent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.28);
   color: var(--muted);
   text-align: center;
 }
 
 .style-item {
   border: 1px solid var(--line);
-  border-radius: var(--radius-shell);
+  border-radius: 8px;
   background: var(--glass-strong);
   padding: 14px;
   box-shadow: var(--soft-shadow);
@@ -336,7 +333,7 @@ a:hover {
   margin-top: 7px;
   padding: 4px 8px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-tight);
+  border-radius: 8px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
@@ -410,7 +407,7 @@ pre {
   margin: 12px 0 0;
   padding: 11px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
+  border-radius: 8px;
   background: color-mix(in srgb, var(--field) 86%, var(--bg));
   color: var(--fg);
   font-size: 12px;
