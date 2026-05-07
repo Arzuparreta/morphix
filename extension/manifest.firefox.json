@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Morphix Restyle",
+  "description": "Restyle any website with natural language and review changes before keeping them.",
+  "version": "0.1.0",
+  "permissions": [
+    "activeTab",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": [
+      "shared/browser-api.js",
+      "background/service-worker.js"
+    ]
+  },
+  "action": {
+    "default_title": "Morphix Restyle",
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "shared/browser-api.js",
+        "content/inject.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "morphix-restyle@arzuparreta.dev",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "authenticationInfo",
+          "websiteContent"
+        ],
+        "optional": [
+          "websiteActivity"
+        ]
+      }
+    }
+  }
+}

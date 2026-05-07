@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DIST_DIR="$ROOT_DIR/dist/firefox"
+
+rm -rf "$DIST_DIR"
+mkdir -p "$DIST_DIR"
+cp -R "$ROOT_DIR/extension/." "$DIST_DIR/"
+cp "$ROOT_DIR/extension/manifest.firefox.json" "$DIST_DIR/manifest.json"
+rm -f "$DIST_DIR/manifest.firefox.json"
+
+printf 'Built Firefox extension into %s\n' "$DIST_DIR"

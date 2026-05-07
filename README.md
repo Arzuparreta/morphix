@@ -31,6 +31,17 @@ This repository does not require a build step. It's free and open-source (FOSS) 
 
 Don't forget to pin **Morphix Restyle** in the extensions menu for quick access!
 
+## 🦊 Firefox Build
+
+Firefox needs a Firefox-specific manifest because `background.service_worker` is not supported there. This repository includes that packaging step.
+
+1. Run `./scripts/build-firefox.sh`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on**
+4. Select `dist/firefox/manifest.json`
+
+The generated Firefox package lives in `dist/firefox/`.
+
 ## ⚙️ Setup your AI Provider
 
 1. Open the extension options page.
