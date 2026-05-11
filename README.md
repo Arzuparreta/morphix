@@ -1,4 +1,4 @@
-![Morphix Logo Banner](docs/branding/morphix_logo_banner.png)
+![Morphix Logo Banner](docs/branding/morphix-ui.png)
 
 # 🎨 Morphix Restyle
 
@@ -72,6 +72,7 @@ If the result is not right, discard the preview or keep prompting over the activ
 As a **SysAdmin**, security is my priority. Morphix stores provider settings and saved styles in Chrome extension storage. Your API keys and settings never leave your browser.
 
 When you click **Apply**, Morphix sends to the selected AI provider:
+
 - Your prompt.
 - The current page URL and title.
 - Viewport size.
