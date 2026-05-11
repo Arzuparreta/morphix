@@ -23,6 +23,7 @@
   const acceptDraftEl = document.getElementById("accept-draft");
   const discardDraftEl = document.getElementById("discard-draft");
   const exportStyleEl = document.getElementById("export-style");
+  const shareGalleryEl = document.getElementById("share-gallery");
 
   let activeTab = null;
   let currentDraft = null;
@@ -37,6 +38,7 @@
   toggleStyleEl.addEventListener("click", toggleActiveStyle);
   deleteStyleEl.addEventListener("click", deleteActiveStyle);
   exportStyleEl.addEventListener("click", exportActiveStyle);
+  shareGalleryEl.addEventListener("click", shareToGallery);
   showVersionsEl.addEventListener("click", toggleVersions);
   document.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => applyPromptChip(chip.dataset.prompt || chip.textContent));
@@ -238,6 +240,49 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  async function shareToGallery() {
+    if (!currentProject) return;
+
+    // Check gallery config
+    const config = await MorphixGallery.getConfig();
+    if (!config || !config.supabaseUrl) {
+      showStatus(
+        "Gallery not configured. Open options to set up your Supabase URL and anon key.",
+        true
+      );
+      return;
+    }
+
+    // Check auth
+    const authed = await MorphixGallery.isAuthenticated();
+    if (!authed) {
+      showStatus("Sign in to the gallery first. Open options to configure.", true);
+      return;
+    }
+
+    const tags = prompt("Add tags (comma separated, optional):");
+    const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+    setBusy(true, "Capturing screenshot and uploading...");
+    try {
+      const response = await send({
+        type: "GALLERY_CAPTURE_AND_UPLOAD",
+        tabId: activeTab.id,
+        project: currentProject,
+        tags: tagList,
+      });
+      setBusy(false);
+      if (response.ok) {
+        showStatus("Shared on gallery!");
+      } else {
+        showStatus(response.error || "Upload failed", true);
+      }
+    } catch (e) {
+      setBusy(false);
+      showStatus(e.message || "Upload failed", true);
+    }
   }
 
   async function toggleActiveStyle() {

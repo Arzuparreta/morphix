@@ -14,6 +14,13 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+ext.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  handleExternalMessage(message, sender)
+    .then((response) => sendResponse(response))
+    .catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
+  return true;
+});
+
 ext.tabs.onRemoved.addListener((tabId) => {
   clearInjectedCaches(tabId);
 });
@@ -110,7 +117,117 @@ async function handleMessage(message, sender) {
     return { ok: true, project, projects: await RestyleStorage.getSavedProjects() };
   }
 
+  // Gallery messages
+  if (message.type === "GALLERY_GET_STYLES_FOR_SITE") {
+    const url = message.url;
+    if (!url) return { ok: false, error: "No URL provided" };
+    try {
+      const domain = new URL(url).hostname.replace(/^www\./, "");
+      const styles = await MorphixGallery.getStylesForSite(domain);
+      return { ok: true, styles };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  if (message.type === "GALLERY_GET_AUTH_STATUS") {
+    try {
+      const authenticated = await MorphixGallery.isAuthenticated();
+      const user = authenticated ? await MorphixGallery.getCurrentUser() : null;
+      return { ok: true, authenticated, user };
+    } catch (e) {
+      return { ok: true, authenticated: false, user: null };
+    }
+  }
+
+  if (message.type === "GALLERY_UPLOAD") {
+    try {
+      const result = await MorphixGallery.uploadStyle(
+        RestyleStorage.exportToMorphix(message.project),
+        message.tags || []
+      );
+      return { ok: true, result };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  if (message.type === "GALLERY_CAPTURE_AND_UPLOAD") {
+    try {
+      const tabId = message.tabId;
+      if (!tabId) return { ok: false, error: "No tab provided" };
+
+      // Capture screenshot of the styled page
+      let screenshotDataUrl = null;
+      try {
+        screenshotDataUrl = await ext.tabs.captureVisibleTab(null, { format: "png" });
+      } catch (e) {
+        // Screenshot failed, continue without it
+      }
+
+      const morphix = RestyleStorage.exportToMorphix(message.project);
+      if (screenshotDataUrl) {
+        morphix.screenshots = [screenshotDataUrl];
+      }
+
+      const result = await MorphixGallery.uploadStyle(morphix, message.tags || []);
+      return { ok: true, result };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
   return { ok: false, error: "Unknown message type" };
+}
+
+async function handleExternalMessage(message, sender) {
+  if (message.type === "MORPHIX_INSTALL_STYLE" && message.slug) {
+    try {
+      // Download the .morphix from the gallery API
+      const config = await MorphixGallery.getConfig();
+      if (!config?.supabaseUrl) {
+        return { ok: false, error: "Gallery not configured" };
+      }
+
+      const res = await fetch(`${config.supabaseUrl}/rest/v1/styles?select=morphix_file&slug=eq.${encodeURIComponent(message.slug)}&is_published=eq.true&limit=1`, {
+        headers: {
+          "apikey": config.supabaseAnonKey,
+          "Authorization": `Bearer ${config.supabaseAnonKey}`,
+        },
+      });
+
+      if (!res.ok) return { ok: false, error: "Style not found" };
+      const data = await res.json();
+      if (!data?.[0]?.morphix_file) return { ok: false, error: "Style has no data" };
+
+      const morphixFile = data[0].morphix_file;
+
+      // Import into extension storage
+      const project = await RestyleStorage.importFromMorphix(morphixFile, "sync");
+
+      // Record the install
+      try {
+        await fetch(`${config.supabaseUrl}/rest/v1/installs`, {
+          method: "POST",
+          headers: {
+            "apikey": config.supabaseAnonKey,
+            "Authorization": `Bearer ${config.supabaseAnonKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            style_id: data[0].id,
+            source: "gallery_web",
+          }),
+        });
+      } catch (_) { /* non-critical */ }
+
+      return { ok: true, project: { name: project.name, id: project.id } };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  return { ok: false, error: "Unknown external message type" };
 }
 
 async function createDraftRestyle(tabId, prompt, projectId) {

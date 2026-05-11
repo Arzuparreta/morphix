@@ -14,6 +14,14 @@
   const importFileEl = document.getElementById("import-file");
   const importStatusEl = document.getElementById("import-status");
 
+  const galleryUrlEl = document.getElementById("gallery-url");
+  const galleryKeyEl = document.getElementById("gallery-anon-key");
+  const galleryEmailEl = document.getElementById("gallery-email");
+  const galleryPassEl = document.getElementById("gallery-password");
+  const saveGalleryEl = document.getElementById("save-gallery");
+  const signoutGalleryEl = document.getElementById("signout-gallery");
+  const galleryStatusEl = document.getElementById("gallery-status");
+
   let providers = {};
   let savedConfig = null;
 
@@ -23,6 +31,8 @@
   saveProviderEl.addEventListener("click", saveProvider);
   importBtnEl.addEventListener("click", () => importFileEl.click());
   importFileEl.addEventListener("change", handleImportFile);
+  saveGalleryEl.addEventListener("click", saveGalleryConfig);
+  signoutGalleryEl.addEventListener("click", signOutGallery);
 
   async function loadOptions() {
     const response = await send({ type: "RESTYLE_GET_OPTIONS" });
@@ -35,6 +45,7 @@
     savedConfig = response.providerConfig || {};
     renderProviderSelect();
     fillProviderForm(savedConfig);
+    loadGalleryConfig();
     renderLibrary(response.projects || []);
   }
 
@@ -162,6 +173,13 @@
       exportButton.title = "Export as .morphix file";
       exportButton.addEventListener("click", () => exportProjectFile(project));
 
+      const shareButton = document.createElement("button");
+      shareButton.className = "share-gallery";
+      shareButton.type = "button";
+      shareButton.textContent = "Share";
+      shareButton.title = "Share to Morphix Gallery";
+      shareButton.addEventListener("click", () => shareStyleToGallery(project));
+
       const deleteButton = document.createElement("button");
       deleteButton.className = "delete";
       deleteButton.type = "button";
@@ -171,7 +189,7 @@
         if (response.ok) renderLibrary(response.projects || []);
       });
 
-      actions.append(toggleButton, exportButton, deleteButton);
+      actions.append(toggleButton, exportButton, shareButton, deleteButton);
       top.append(copy, actions);
       item.append(top);
       item.append(createScopeEditor(project));
@@ -386,6 +404,82 @@
   function setImportStatus(message, isError) {
     importStatusEl.textContent = message;
     importStatusEl.classList.toggle("error", Boolean(isError));
+  }
+
+  // ── Gallery ────────────────────────────────────────
+
+  async function loadGalleryConfig() {
+    const config = await MorphixGallery.getConfig();
+    if (config) {
+      galleryUrlEl.value = config.supabaseUrl || "";
+      galleryKeyEl.value = config.supabaseAnonKey || "";
+    }
+    const authed = await MorphixGallery.isAuthenticated();
+    galleryStatusEl.textContent = authed ? "Connected to gallery" : "Not connected";
+  }
+
+  async function saveGalleryConfig() {
+    const url = galleryUrlEl.value.trim();
+    const key = galleryKeyEl.value.trim();
+    const email = galleryEmailEl.value.trim();
+    const password = galleryPassEl.value;
+
+    if (!url || !key) {
+      galleryStatusEl.textContent = "URL and anon key are required";
+      return;
+    }
+
+    await MorphixGallery.saveConfig({ supabaseUrl: url, supabaseAnonKey: key });
+
+    if (email && password) {
+      galleryStatusEl.textContent = "Connecting...";
+      try {
+        await MorphixGallery.signIn(email, password);
+        galleryStatusEl.textContent = "Connected to gallery";
+        galleryPassEl.value = "";
+      } catch (e) {
+        galleryStatusEl.textContent = "Config saved, but login failed: " + e.message;
+      }
+    } else {
+      galleryStatusEl.textContent = "Gallery config saved.";
+    }
+  }
+
+  async function signOutGallery() {
+    await MorphixGallery.signOut();
+    galleryStatusEl.textContent = "Signed out";
+  }
+
+  async function shareStyleToGallery(project) {
+    const config = await MorphixGallery.getConfig();
+    if (!config || !config.supabaseUrl) {
+      setImportStatus("Gallery not configured. Set up Supabase above.", true);
+      return;
+    }
+    const authed = await MorphixGallery.isAuthenticated();
+    if (!authed) {
+      setImportStatus("Sign in to the gallery first (use email/password above).", true);
+      return;
+    }
+
+    const tags = prompt("Add tags (comma separated, optional):");
+    const tagList = tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+    setImportStatus("Uploading...");
+    try {
+      const response = await send({
+        type: "GALLERY_UPLOAD",
+        project: project,
+        tags: tagList,
+      });
+      if (response.ok) {
+        setImportStatus("Shared on gallery!");
+      } else {
+        setImportStatus(response.error || "Upload failed", true);
+      }
+    } catch (e) {
+      setImportStatus(e.message || "Upload failed", true);
+    }
   }
 
   function send(message) {

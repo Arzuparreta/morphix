@@ -494,3 +494,14 @@ pre {
   background: var(--accent-soft);
   border-color: var(--accent);
 }
+
+.style-actions .share-gallery {
+  color: var(--success);
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+.style-actions .share-gallery:hover {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border-color: var(--success);
+}
