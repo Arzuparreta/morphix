@@ -438,10 +438,17 @@
     const versionIdMap = new Map();
     const newVersions = [];
 
+    // Pass 1: build ID mapping
     if (Array.isArray(style.versions) && style.versions.length > 0) {
       for (const v of style.versions) {
-        const newId = uuid("version");
-        versionIdMap.set(v.id, newId);
+        versionIdMap.set(v.id, uuid("version"));
+      }
+    }
+
+    // Pass 2: create versions with remapped IDs and parent links
+    if (Array.isArray(style.versions) && style.versions.length > 0) {
+      for (const v of style.versions) {
+        const newId = versionIdMap.get(v.id);
         newVersions.push(
           makeVersion({
             id: newId,
