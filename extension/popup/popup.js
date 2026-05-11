@@ -10,6 +10,8 @@
   const warningsEl = document.getElementById("warnings");
   const siteStatusEl = document.getElementById("site-status");
   const optionsEl = document.getElementById("options");
+  const themeToggleEl = document.getElementById("theme-toggle");
+  const themeIconEl = document.getElementById("theme-icon");
   const activeStyleEl = document.getElementById("active-style");
   const activeNameEl = document.getElementById("active-name");
   const activeDescriptionEl = document.getElementById("active-description");
@@ -47,6 +49,28 @@
     event.preventDefault();
     ext.runtime.openOptionsPage();
   });
+  themeToggleEl.addEventListener("click", toggleTheme);
+
+  // Set initial theme icon
+  function updateThemeIcon() {
+    const isDark = !document.documentElement.hasAttribute("data-theme") ||
+      document.documentElement.getAttribute("data-theme") !== "light";
+    themeIconEl.textContent = isDark ? "☀" : "🌙";
+    themeToggleEl.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+  updateThemeIcon();
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    if (current === "light") {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.setItem("morphix-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+      localStorage.setItem("morphix-theme", "light");
+    }
+    updateThemeIcon();
+  }
 
   async function init() {
     promptEl.focus();

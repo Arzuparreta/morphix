@@ -1,5 +1,28 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
+  /* Dark mode (default) — matches gallery palette */
+  --bg: #09090b;
+  --fg: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --glass: rgba(24, 24, 27, 0.85);
+  --glass-strong: rgba(24, 24, 27, 0.95);
+  --field: rgba(255, 255, 255, 0.06);
+  --accent: #a855f7;
+  --accent-2: #c084fc;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --radius-shell: 18px;
+  --radius-control: 12px;
+  --radius-tight: 10px;
+  --shadow: 0 20px 52px rgba(0, 0, 0, 0.6);
+  --soft-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
   --bg: #eef3fb;
   --fg: #0d1424;
   --muted: #657187;
@@ -9,35 +32,12 @@
   --glass: rgba(255, 255, 255, 0.74);
   --glass-strong: rgba(255, 255, 255, 0.9);
   --field: rgba(255, 255, 255, 0.78);
-  --accent: #176bff;
-  --accent-2: #1fb6ff;
+  --accent: #7c3aed;
+  --accent-2: #8b5cf6;
   --danger: #c5332b;
   --success: #22b879;
-  --radius-shell: 18px;
-  --radius-control: 12px;
-  --radius-tight: 10px;
   --shadow: 0 20px 52px rgba(37, 54, 92, 0.14);
   --soft-shadow: 0 8px 20px rgba(37, 54, 92, 0.09);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1020;
-    --fg: #f4f7fb;
-    --muted: #a8b2c5;
-    --subtle: #768299;
-    --line: rgba(255, 255, 255, 0.12);
-    --line-strong: rgba(255, 255, 255, 0.2);
-    --glass: rgba(18, 26, 45, 0.76);
-    --glass-strong: rgba(24, 34, 57, 0.92);
-    --field: rgba(255, 255, 255, 0.07);
-    --accent: #4f8cff;
-    --accent-2: #46d1ff;
-    --danger: #ff7b72;
-    --success: #5ee0a0;
-    --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
-    --soft-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
-  }
 }
 
 * {
@@ -482,6 +482,28 @@ pre {
 
 .hidden {
   display: none !important;
+}
+
+.theme-toggle-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tight);
+  background: var(--glass);
+  color: var(--fg);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--line);
 }
 
 .style-actions .export {

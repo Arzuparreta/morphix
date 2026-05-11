@@ -22,6 +22,9 @@
   const signoutGalleryEl = document.getElementById("signout-gallery");
   const galleryStatusEl = document.getElementById("gallery-status");
 
+  const themeToggleEl = document.getElementById("theme-toggle");
+  const themeIconEl = document.getElementById("theme-icon");
+
   let providers = {};
   let savedConfig = null;
 
@@ -33,6 +36,9 @@
   importFileEl.addEventListener("change", handleImportFile);
   saveGalleryEl.addEventListener("click", saveGalleryConfig);
   signoutGalleryEl.addEventListener("click", signOutGallery);
+  themeToggleEl.addEventListener("click", toggleTheme);
+
+  updateThemeIcon();
 
   async function loadOptions() {
     const response = await send({ type: "RESTYLE_GET_OPTIONS" });
@@ -480,6 +486,25 @@
     } catch (e) {
       setImportStatus(e.message || "Upload failed", true);
     }
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    if (current === "light") {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.setItem("morphix-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+      localStorage.setItem("morphix-theme", "light");
+    }
+    updateThemeIcon();
+  }
+
+  function updateThemeIcon() {
+    const isDark = !document.documentElement.hasAttribute("data-theme") ||
+      document.documentElement.getAttribute("data-theme") !== "light";
+    themeIconEl.textContent = isDark ? "☀" : "🌙";
+    themeToggleEl.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
   }
 
   function send(message) {

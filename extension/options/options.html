@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Morphix Options</title>
     <link rel="stylesheet" href="options.css">
+    <script>
+      (function() {
+        var t = localStorage.getItem('morphix-theme');
+        if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      })();
+    </script>
   </head>
   <body>
     <main class="shell">
@@ -15,6 +21,9 @@
           <h1>Restyle control center</h1>
           <p class="muted">Tune your AI provider and manage the styles Morphix applies across the web.</p>
         </div>
+        <button id="theme-toggle" class="theme-toggle-btn" type="button" aria-label="Toggle theme" title="Toggle light/dark mode">
+          <span id="theme-icon" aria-hidden="true">☀</span>
+        </button>
       </header>
 
       <section class="panel">
