@@ -1,120 +1,193 @@
 <div align="center">
-  <img src="docs/branding/morphix-ui.png" alt="Morphix UI" width="320">
+  <img src="docs/branding/morphix-ui.png" alt="Morphix" width="320">
+
+  # Morphix
+
+  **AI-powered website restyling. Share your styles with the world.**
+
+  [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+  [![GitHub stars](https://img.shields.io/github/stars/Arzuparreta/morphix?style=social)](https://github.com/Arzuparreta/morphix)
+
 </div>
 
-# 🎨 Morphix Restyle
+---
 
-**Restyle any website in seconds with a single prompt.**
+## What is Morphix?
 
-I'm **Arzuparreta**, a musician passionate about technology and a Linux Systems Administrator. Morphix was born from a real need: as someone who spends hours in front of screens configuring servers, writing code, and creating music, I needed a fast way to adapt the web to my workflow without wasting time manually editing CSS.
+Morphix is a browser extension that lets you **restyle any website using natural language** — describe what you want and AI generates the CSS and JavaScript. Export your styles as portable `.morphix` files, share them on the community gallery, or install styles created by others with one click.
 
-With Morphix, you simply open the extension, describe the visual change you want, and the AI generates the necessary CSS/JavaScript instantly. It's the perfect union between **systems automation**, **artificial intelligence**, and **musical aesthetic sense**.
+Think of it as **Stylus meets Dribbble, powered by AI**. Instead of writing CSS by hand, you describe the change in plain English. Instead of hunting through forum threads for styles, you browse a visual gallery with screenshots, ratings, and one-click install.
 
-## ✨ What it does
+### How it compares
 
-- **Prompt-based Restyling**: Change the appearance of any website using natural language.
-- **Smart Context**: Extracts a lightweight summary of the visible page so the model targets real elements.
-- **Dynamic Injection**: Injects CSS and optional JavaScript when CSS isn't enough.
-- **Live Preview**: Visualize changes before applying them permanently.
-- **Style Workspaces**: Every saved restyle becomes an editable project with versions, conversation context, pause/delete controls, and rollback.
-- **Style Management**: Keep styles for a session, a specific URL, an entire domain, or as a paused library-only style.
-- **Multiple AI Providers**: Compatible with OpenRouter, Anthropic, OpenCode Go, Ollama, and any OpenAI-compatible endpoint.
+| | Morphix | Stylish / Userstyles.org | Stylus |
+|---|---|---|---|
+| **Style creation** | AI prompt → instant CSS+JS | Manual CSS editor | Manual CSS editor |
+| **Community gallery** | Visual cards, search, ratings | Forum-style list, heavy ads | No central gallery (3rd-party) |
+| **Sharing format** | `.morphix` — full version history + AI context | Basic CSS snippet | UserCSS (CSS + metadata) |
+| **Dark mode** | Default (gallery matches extension) | None | None |
+| **Privacy** | Keys stay local, only page summary sent | Sold to analytics company | No tracking (FOSS) |
+| **Install from web** | One click from gallery → extension | Manual copy-paste | Manual install URL |
 
-## 🚀 Local Installation
+## Features
 
-This repository does not require a build step. It's free and open-source (FOSS) because I believe in privacy and user control over their tools.
+### Browser extension
+- **Prompt-based restyling** — Type what you want to change. Get CSS and JavaScript instantly.
+- **Smart page context** — The AI sees element tags, classes, IDs, and text snippets, not your full page HTML.
+- **Live preview** — Review changes before applying. Discard or keep with one click.
+- **Version history** — Every edit becomes a version. Roll back to any previous state. Full conversation log preserved.
+- **Per-site scoping** — Apply styles to a specific page, entire domain, or keep them in your library.
+- **Multiple AI providers** — OpenRouter, Anthropic, Ollama, OpenCode Go, or any OpenAI-compatible endpoint.
+- **Export/Import** — Share styles as `.morphix` files. Files include every version and the full AI conversation.
+- **Share to Gallery** — Upload styles directly from the extension with automatic screenshots.
+- **Community discovery** — See styles from the gallery that match the site you're browsing.
 
-1. Clone or download the repository.
+### Community gallery
+- **Visual browsing** — Styles shown as cards with screenshots, ratings, and install counts.
+- **Full-text search** — Search by name, description, tags, or target site.
+- **Filter by tags** — Narrow by "dark", "minimal", "youtube", "github", and more.
+- **Ratings & comments** — Rate styles 1–5 stars. Leave feedback. Threaded replies.
+- **One-click install** — Click "Install" on the gallery, the extension imports the style automatically.
+- **Author profiles** — See all styles by a creator. Build a following.
+
+## Quick start — Extension
+
+The extension loads directly from source — no build step required.
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Arzuparreta/morphix.git
+   ```
 2. Open Chrome or any Chromium-based browser.
-3. Go to `chrome://extensions`.
-4. Turn on **Developer mode**.
-5. Click **Load unpacked**.
-6. Select the `extension/` folder from this repository.
+3. Go to `chrome://extensions` and enable **Developer mode**.
+4. Click **Load unpacked** and select the `extension/` folder.
+5. Pin **Morphix** in the toolbar.
 
-Don't forget to pin **Morphix Restyle** in the extensions menu for quick access!
+### Configure an AI provider
 
-## 🦊 Firefox Build
+1. Right-click the Morphix icon → **Options** (or click the gear in the popup).
+2. Select a provider (OpenRouter is the default).
+3. Enter your API key, model, and any custom headers.
+4. Click **Test provider**, then **Save**.
 
-Firefox needs a Firefox-specific manifest because `background.service_worker` is not supported there. This repository includes that packaging step.
+### Create your first style
 
-1. Run `./scripts/build-firefox.sh`
-2. Open `about:debugging#/runtime/this-firefox`
-3. Click **Load Temporary Add-on**
-4. Select `dist/firefox/manifest.json`
+1. Visit any website.
+2. Open the Morphix popup.
+3. Type a prompt like:
+   - `Make this page easier to read with better spacing and contrast.`
+   - `Give this a dark theme with amber accents.`
+   - `Remove the sidebar and widen the main content.`
+4. Click **Preview**. Review the result.
+5. Click **Apply style** to keep it.
 
-The generated Firefox package lives in `dist/firefox/`.
+### Firefox
 
-## ⚙️ Setup your AI Provider
+Firefox requires a separate manifest because `background.service_worker` is not supported.
 
-1. Open the extension options page.
-2. Choose a provider.
-3. Enter the model, base URL, API key, and any custom headers required by the provider.
-4. Click **Test provider** to verify the connection.
-5. Click **Save provider** to store it.
+```bash
+./scripts/build-firefox.sh
+```
+Then load `dist/firefox/manifest.json` as a temporary add-on in `about:debugging`.
 
-The default provider configuration is OpenRouter. Local providers such as Ollama can be used without an API key if they expose an OpenAI-compatible `/v1/chat/completions` endpoint.
+## Quick start — Gallery
 
-## 🎯 How to use it
+The gallery is a Next.js 14 app backed by Supabase (free tier). It takes about 5 minutes to set up.
 
-1. Visit any website you want to restyle.
-2. Open Morphix Restyle from the browser toolbar.
-3. Type a prompt, for example:
-   - `Make this page calmer and easier to read.`
-   - `Increase contrast and make buttons more obvious.`
-   - `Hide distracting sidebars and widen the main article.`
-4. Click **Apply**.
-5. Review the result.
-6. Decide whether to keep it for the session, the page, the site, or your library.
-7. Reopen Morphix later to refine, pause, delete, or roll back the active style.
+### 1. Create a Supabase project
 
-If the result is not right, discard the preview or keep prompting over the active style. Morphix sends the active style and recent style history when you refine, so the model edits what already exists instead of starting from scratch.
+Go to [supabase.com](https://supabase.com) → New project (free tier). Note your project URL and anon key from **Settings → API**.
 
-## 🛡️ Privacy & Security
+### 2. Run the database migration
 
-As a **SysAdmin**, security is my priority. Morphix stores provider settings and saved styles in Chrome extension storage. Your API keys and settings never leave your browser.
+Open the **SQL Editor** in your Supabase dashboard. Paste the contents of `supabase/migrations/001_schema.sql` and click **Run**.
 
-When you click **Apply**, Morphix sends to the selected AI provider:
+This creates all tables, indexes, RLS policies, triggers, and the full-text search function.
 
-- Your prompt.
-- The current page URL and title.
-- Viewport size.
-- A compact summary of visible page elements (tags, stable identifiers, text snippets, and positions).
+### 3. Create storage buckets
 
-**By design**, Morphix does not send the full page HTML. You can see exactly what context is sent in each draft under **What we sent** in the popup.
+Go to **Storage** in the Supabase dashboard. Create two public buckets:
+- `screenshots`
+- `avatars`
 
-When refining a saved style, Morphix also sends the current injected CSS/JavaScript and recent style conversation so the provider can make a targeted update. Generated JavaScript is flagged in the preview before you keep it.
+### 4. Configure and run the gallery
 
-## 🗂️ Project Layout
-
-```text
-extension/
-  manifest.json                 Extension manifest
-  background/service-worker.js   Message handling, provider calls, style injection
-  content/extract.js             Visible page context extraction
-  content/inject.js              Runtime style/script injection and route handling
-  options/                       Provider settings and style library UI
-  popup/                         Prompt, preview, and keep/discard UI
-  shared/                        Providers, prompt, and storage helpers
+```bash
+cd gallery
+cp .env.local.example .env.local
+# Edit .env.local with your Supabase URL and anon key
+npm install
+npm run dev
 ```
 
-## 🌱 Project Status
+The gallery runs at `http://localhost:3000`.
 
-Morphix Restyle is an early local extension. Expect rough edges, especially on sites with strict Content Security Policies, heavy Shadow DOM usage, or very dynamic layouts.
+### 5. Connect the extension to the gallery
 
-**Contributions and fixes are welcome**. If you like the tool and want to collaborate, feel free to open an issue or a pull request!
+1. Open the extension **Options** page.
+2. Scroll to the **Gallery** section.
+3. Enter your Supabase URL and anon key.
+4. Enter your gallery email and password to sign in.
+5. Click **Save & connect**.
 
-## 🎼 Who's behind this?
+### 6. Deploy (optional)
 
-I'm **Arzuparreta**, a musician who got into the world of Linux systems and automation. Morphix is a reflection of my way of working: efficient, creative, and slightly different from the usual.
+```bash
+cd gallery
+npx vercel deploy
+```
 
-- 🐧 **Linux SysAdmin**: I know how to keep things running and secure.
-- 🎵 **Musician**: I understand the importance of aesthetics and visual rhythm.
-- 🤖 **AI Builder**: I use AI to automate simple tasks and boost creativity.
+Update `externally_connectable.matches` in `extension/manifest.json` with your deployed domain for the one-click install from gallery to work.
 
-If you like my work, give this repo a ⭐ and follow me to see how I build tools that mix these worlds.
+## Project structure
 
-[![GitHub followers](https://img.shields.io/github/followers/Arzuparreta?label=Follow&style=social)](https://github.com/Arzuparreta)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Arzuparreta?style=social)](https://twitter.com/Arzuparreta)
+```
+morphix/
+├── extension/                   # Browser extension (Chrome/Firefox)
+│   ├── manifest.json            # Extension manifest
+│   ├── background/
+│   │   └── service-worker.js    # Message routing, provider calls, injection
+│   ├── content/
+│   │   ├── extract.js           # Page context extraction for AI
+│   │   └── inject.js            # CSS/JS injection engine
+│   ├── popup/                   # Prompt, preview, style controls
+│   ├── options/                 # Provider config, style library, gallery setup
+│   └── shared/                  # Storage, prompts, providers, gallery client
+├── gallery/                     # Community gallery web app
+│   ├── app/                     # Next.js App Router pages + API routes
+│   ├── components/              # UI components (cards, buttons, theme)
+│   │   └── ui/                  # shadcn/ui primitives
+│   └── lib/supabase/            # Types, queries, client config
+├── supabase/
+│   └── migrations/              # Database schema SQL
+├── scripts/                     # Build scripts, tests
+└── docs/                        # Design documents, branding
+```
+
+## Privacy
+
+- **Your API keys never leave your browser.** They are stored in Chrome extension local storage.
+- **Morphix sends a compact page summary** to the AI provider (element tags, classes, text snippets, viewport size) — not the full page HTML. You can inspect exactly what's sent under "What we sent" in the popup.
+- **No analytics, no tracking, no data collection.** The extension has no telemetry. The gallery uses no third-party trackers.
+- **Styles are stored locally** in your browser. Sharing to the gallery is opt-in.
+
+## Contributing
+
+Morphix is open source and built in public. Contributions are welcome.
+
+- **Report bugs** — Open an issue with steps to reproduce.
+- **Suggest features** — Open an issue with the `enhancement` label.
+- **Submit PRs** — Fork, branch, and open a pull request. Keep diffs focused.
+- **Share styles** — The gallery needs content. Upload your styles.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines (coming soon).
+
+## License
+
+Morphix is licensed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENSE](LICENSE) for the full text.
+
+Styles shared on the gallery are licensed under **CC BY-SA 4.0** by default. Authors may choose a more permissive license (MIT, CC0) on upload.
 
 ---
-*Building in public - Linux, Music, and Code.* 🚀
+
+Built by [Arzuparreta](https://github.com/Arzuparreta).
