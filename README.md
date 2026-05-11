@@ -1,4 +1,6 @@
-![Morphix Logo Banner](docs/branding/morphix-ui.png)
+<div align="center">
+  <img src="docs/branding/morphix-ui.png" alt="Morphix UI" width="320">
+</div>
 
 # 🎨 Morphix Restyle
 
