@@ -9,14 +9,15 @@ import { getStyleBySlug, getComments } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 import {
   Download,
-  Heart,
-  Share2,
   Star,
   MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
-import type { StyleWithAuthor } from "@/lib/supabase/types";
+import type { CommentWithAuthor } from "@/lib/supabase/types";
+import { LikeButton } from "@/components/like-button";
+import { RatingStars } from "@/components/rating-stars";
+import { CommentSection } from "@/components/comment-section";
+import { InstallButton } from "@/components/install-button";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -56,6 +57,10 @@ export default async function StyleDetailPage({ params }: Props) {
     userRating = r?.score ?? null;
     userLiked = !!l;
   }
+
+  // Comments
+  const comments: CommentWithAuthor[] = [];
+  try { const c = await getComments(style.id); if (c) comments.push(...c); } catch {}
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
@@ -109,7 +114,7 @@ export default async function StyleDetailPage({ params }: Props) {
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
-          <Button>Install with Morphix</Button>
+        <InstallButton styleSlug={style.slug} styleName={style.name} />
           <a
             href={`/api/styles/${style.slug}/download`}
             download
@@ -137,11 +142,21 @@ export default async function StyleDetailPage({ params }: Props) {
           <p className="text-muted-foreground leading-relaxed">{style.description}</p>
         )}
 
+        {/* Rating */}
+        <RatingStars
+          styleId={style.id}
+          initialRating={userRating}
+          avgRating={style.avg_rating}
+          ratingsCount={style.ratings_count}
+        />
+
         {/* Stats */}
         <div className="flex gap-6 text-sm text-muted-foreground border-t border-b border-border py-4">
-          <span className="flex items-center gap-1">
-            <Heart className="h-3.5 w-3.5" /> {style.likes_count} likes
-          </span>
+          <LikeButton
+            styleId={style.id}
+            initialLiked={userLiked}
+            initialCount={style.likes_count}
+          />
           <span className="flex items-center gap-1">
             <Download className="h-3.5 w-3.5" /> {style.installs_count} installs
           </span>
@@ -157,51 +172,13 @@ export default async function StyleDetailPage({ params }: Props) {
       {/* Comments */}
       <Card className="mt-8 p-6">
         <h2 className="font-semibold mb-4">Comments ({style.comments_count})</h2>
-        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading comments...</p>}>
-          <CommentsSection styleId={style.id} />
-        </Suspense>
+        <CommentSection styleId={style.id} initialComments={comments} />
       </Card>
     </div>
   );
 }
 
-// ── Comments ───────────────────────────────────────────
 
-async function CommentsSection({ styleId }: { styleId: string }) {
-  const comments = await getComments(styleId);
-
-  if (!comments.length) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No comments yet. Be the first to share your thoughts!
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {comments.map((comment) => (
-        <div key={comment.id} className="flex gap-3">
-          <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-            <AvatarImage src={comment.author.avatar_url || undefined} />
-            <AvatarFallback className="text-[10px]">
-              {(comment.author.display_name || comment.author.username).slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">{comment.author.display_name || comment.author.username}</span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(comment.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <p className="text-sm mt-0.5">{comment.body}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── Prompt preview ────────────────────────────────────
 
