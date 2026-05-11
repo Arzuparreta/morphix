@@ -256,7 +256,7 @@ CREATE POLICY likes_delete ON public.likes FOR DELETE USING (auth.uid() = user_i
 -- Comments: anyone read, authenticated can create, owner can update/delete
 CREATE POLICY comments_read   ON public.comments FOR SELECT USING (true);
 CREATE POLICY comments_insert ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY comments_manage ON public.comments FOR UPDATE DELETE USING (auth.uid() = user_id);
+CREATE POLICY comments_manage ON public.comments FOR ALL USING (auth.uid() = user_id);
 
 -- Installs: anyone can insert, anyone can read
 CREATE POLICY installs_read   ON public.installs FOR SELECT USING (true);
