@@ -457,3 +457,5 @@ pre {
     transform: rotate(360deg);
   }
 }
+
+/* Export button sits naturally in compact-actions flex layout */

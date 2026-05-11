@@ -10,6 +10,9 @@
   const saveProviderEl = document.getElementById("save-provider");
   const statusEl = document.getElementById("provider-status");
   const libraryEl = document.getElementById("library");
+  const importBtnEl = document.getElementById("import-style");
+  const importFileEl = document.getElementById("import-file");
+  const importStatusEl = document.getElementById("import-status");
 
   let providers = {};
   let savedConfig = null;
@@ -18,6 +21,8 @@
   providerEl.addEventListener("change", applyProviderDefaults);
   testProviderEl.addEventListener("click", testProvider);
   saveProviderEl.addEventListener("click", saveProvider);
+  importBtnEl.addEventListener("click", () => importFileEl.click());
+  importFileEl.addEventListener("change", handleImportFile);
 
   async function loadOptions() {
     const response = await send({ type: "RESTYLE_GET_OPTIONS" });
@@ -150,6 +155,13 @@
         if (response.ok) renderLibrary(response.projects || []);
       });
 
+      const exportButton = document.createElement("button");
+      exportButton.className = "export";
+      exportButton.type = "button";
+      exportButton.textContent = "Export";
+      exportButton.title = "Export as .morphix file";
+      exportButton.addEventListener("click", () => exportProjectFile(project));
+
       const deleteButton = document.createElement("button");
       deleteButton.className = "delete";
       deleteButton.type = "button";
@@ -159,7 +171,7 @@
         if (response.ok) renderLibrary(response.projects || []);
       });
 
-      actions.append(toggleButton, deleteButton);
+      actions.append(toggleButton, exportButton, deleteButton);
       top.append(copy, actions);
       item.append(top);
       item.append(createScopeEditor(project));
@@ -293,6 +305,87 @@
     } catch (_error) {
       return currentValue.replace(/^www\./, "");
     }
+  }
+
+  function exportProjectFile(project) {
+    const morphix = RestyleStorage.exportToMorphix(project);
+    if (!morphix) {
+      setImportStatus("Could not export this style.", true);
+      return;
+    }
+    const filename = sanitizeFilename(project.name || "style") + ".morphix";
+    downloadJson(morphix, filename);
+    setImportStatus("Exported: " + filename);
+  }
+
+  function sanitizeFilename(name) {
+    return name.replace(/[^a-zA-Z0-9\-_\s]/g, "").trim().replace(/\s+/g, "-") || "morphix-style";
+  }
+
+  function downloadJson(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    setImportStatus("Reading file...");
+
+    let text;
+    try {
+      text = await readFileAsText(file);
+    } catch (error) {
+      setImportStatus("Could not read file: " + error.message, true);
+      return;
+    }
+
+    let morphixJson;
+    try {
+      morphixJson = JSON.parse(text);
+    } catch (error) {
+      setImportStatus("Invalid JSON file.", true);
+      return;
+    }
+
+    const validation = RestyleStorage.isMorphixValid(morphixJson);
+    if (!validation.ok) {
+      setImportStatus(validation.error, true);
+      return;
+    }
+
+    setImportStatus("Importing style...");
+    try {
+      const result = await RestyleStorage.importFromMorphix(morphixJson, "sync");
+      setImportStatus("Imported \"" + result.name + "\".");
+      const response = await send({ type: "RESTYLE_GET_OPTIONS" });
+      if (response.ok) renderLibrary(response.projects || []);
+    } catch (error) {
+      setImportStatus(error.message || "Import failed.", true);
+    } finally {
+      importFileEl.value = "";
+    }
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error("File read failed"));
+      reader.readAsText(file);
+    });
+  }
+
+  function setImportStatus(message, isError) {
+    importStatusEl.textContent = message;
+    importStatusEl.classList.toggle("error", Boolean(isError));
   }
 
   function send(message) {

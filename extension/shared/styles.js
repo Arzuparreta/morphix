@@ -350,11 +350,192 @@
     return updateProject(id, { url_pattern: urlPattern });
   }
 
+  function exportToMorphix(project, authorInfo) {
+    const version = activeVersion(project);
+    if (!version) return null;
+
+    return {
+      format_version: 1,
+      type: "morphix_style",
+      style: {
+        name: project.name || "Untitled style",
+        description: version.description || project.name || "",
+        url_pattern: project.url_pattern || getLibraryPattern(),
+        active_version: {
+          css: version.css || "",
+          js: version.js || "",
+          prompt: version.prompt || "",
+          description: version.description || "",
+          validation: version.validation || null,
+          parent_version_id: version.parent_version_id,
+          created_at: version.created_at
+        },
+        versions: Array.isArray(project.versions)
+          ? project.versions.map((v) => ({
+              id: v.id,
+              css: v.css || "",
+              js: v.js || "",
+              prompt: v.prompt || "",
+              description: v.description || "",
+              validation: v.validation || null,
+              parent_version_id: v.parent_version_id || null,
+              created_at: v.created_at
+            }))
+          : [],
+        conversation: Array.isArray(project.conversation)
+          ? project.conversation.map((c) => ({
+              role: c.role,
+              content: c.content,
+              version_id: c.version_id,
+              created_at: c.created_at
+            }))
+          : []
+      },
+      author: authorInfo || { name: "" },
+      exported_at: nowIso()
+    };
+  }
+
+  function isMorphixValid(morphixJson) {
+    if (!morphixJson || typeof morphixJson !== "object") {
+      return { ok: false, error: "Invalid file: not a valid JSON object" };
+    }
+    if (morphixJson.format_version !== 1) {
+      return { ok: false, error: "Unsupported format version: " + (morphixJson.format_version || "missing") };
+    }
+    if (morphixJson.type !== "morphix_style") {
+      return { ok: false, error: "Invalid file: not a Morphix style" };
+    }
+    if (!morphixJson.style || typeof morphixJson.style !== "object") {
+      return { ok: false, error: "Invalid file: missing style data" };
+    }
+    return { ok: true };
+  }
+
+  function findSimilarProject(project, projects) {
+    const active = activeVersion(project);
+    const css = active?.css || "";
+    const js = active?.js || "";
+    for (const existing of projects) {
+      const existingActive = activeVersion(existing);
+      if (
+        existing.name === project.name &&
+        JSON.stringify(existing.url_pattern) === JSON.stringify(project.url_pattern) &&
+        existingActive?.css === css &&
+        existingActive?.js === js
+      ) {
+        return existing;
+      }
+    }
+    return null;
+  }
+
+  async function importFromMorphix(morphixJson, storage) {
+    const validation = isMorphixValid(morphixJson);
+    if (!validation.ok) throw new Error(validation.error);
+
+    const style = morphixJson.style;
+    const versionIdMap = new Map();
+    const newVersions = [];
+
+    if (Array.isArray(style.versions) && style.versions.length > 0) {
+      for (const v of style.versions) {
+        const newId = uuid("version");
+        versionIdMap.set(v.id, newId);
+        newVersions.push(
+          makeVersion({
+            id: newId,
+            css: v.css,
+            js: v.js,
+            prompt: v.prompt,
+            description: v.description,
+            validation: v.validation,
+            parent_version_id: v.parent_version_id ? versionIdMap.get(v.parent_version_id) || null : null,
+            created_at: v.created_at
+          })
+        );
+      }
+    } else {
+      const av = style.active_version || {};
+      newVersions.push(
+        makeVersion({
+          css: av.css,
+          js: av.js,
+          prompt: av.prompt,
+          description: av.description,
+          validation: av.validation
+        })
+      );
+    }
+
+    const activeVersionObj = newVersions[0];
+
+    const newConversation = [];
+    if (Array.isArray(style.conversation)) {
+      for (const c of style.conversation) {
+        newConversation.push({
+          role: c.role,
+          content: c.content,
+          version_id: versionIdMap.get(c.version_id) || activeVersionObj.id,
+          created_at: c.created_at || nowIso()
+        });
+      }
+    }
+
+    if (newConversation.length === 0 && activeVersionObj.prompt) {
+      newConversation.push({
+        role: "user",
+        content: activeVersionObj.prompt,
+        version_id: activeVersionObj.id,
+        created_at: activeVersionObj.created_at
+      });
+    }
+    if (newConversation.length <= 1 && activeVersionObj.description) {
+      newConversation.push({
+        role: "assistant",
+        content: activeVersionObj.description,
+        version_id: activeVersionObj.id,
+        created_at: activeVersionObj.created_at
+      });
+    }
+
+    const newProjectId = uuid("style");
+    const project = {
+      id: newProjectId,
+      name: style.name || "Imported style",
+      url_pattern: style.url_pattern || getLibraryPattern(),
+      enabled: style.url_pattern?.type === "library" ? false : true,
+      active_version_id: activeVersionObj.id,
+      versions: newVersions,
+      conversation: newConversation,
+      created_at: nowIso(),
+      updated_at: nowIso(),
+      hits: 0
+    };
+
+    const targetStorage = storage || "sync";
+    const projects = targetStorage === "session" ? await getSessionProjects() : await getSavedProjects();
+
+    const similar = findSimilarProject(project, projects);
+    if (similar) {
+      throw new Error(
+        "A style with this name, target, and CSS already exists: \"" +
+          similar.name +
+          "\". Delete it first, or import as a copy."
+      );
+    }
+
+    projects.unshift(project);
+    await saveProjectList(targetStorage, projects);
+    return { ...project, storage: targetStorage };
+  }
+
   self.RestyleStorage = {
     activeVersion,
     addVersionFromDraft,
     createProjectFromDraft,
     deleteProject,
+    exportToMorphix,
     findMatchingProjects,
     findProject,
     getAllProjects,
@@ -363,6 +544,8 @@
     getLibraryPattern,
     getSavedProjects,
     getSessionProjects,
+    importFromMorphix,
+    isMorphixValid,
     latestConversation,
     matchPattern,
     patternForScope,

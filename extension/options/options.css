@@ -443,3 +443,54 @@ pre {
     max-width: none;
   }
 }
+
+/* Library toolbar — import area */
+.library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.import-btn {
+  padding: 8px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.import-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.import-status {
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 20px;
+}
+
+.import-status.error {
+  color: var(--danger);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.style-actions .export {
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+.style-actions .export:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}

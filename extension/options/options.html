@@ -75,10 +75,16 @@
           </div>
           <p class="privacy-note">Review scope, restore versions, pause, or remove styles you no longer use.</p>
         </div>
+        <div class="library-toolbar">
+          <input type="file" id="import-file" accept=".morphix,.json" class="hidden">
+          <button id="import-style" type="button" class="import-btn">Import style</button>
+          <span id="import-status" class="import-status" aria-live="polite"></span>
+        </div>
         <div id="library" class="library"></div>
       </section>
     </main>
     <script src="../shared/browser-api.js"></script>
+    <script src="../shared/styles.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

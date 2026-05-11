@@ -22,6 +22,7 @@
   const composeHintEl = document.getElementById("compose-hint");
   const acceptDraftEl = document.getElementById("accept-draft");
   const discardDraftEl = document.getElementById("discard-draft");
+  const exportStyleEl = document.getElementById("export-style");
 
   let activeTab = null;
   let currentDraft = null;
@@ -35,6 +36,7 @@
   discardDraftEl.addEventListener("click", discardDraft);
   toggleStyleEl.addEventListener("click", toggleActiveStyle);
   deleteStyleEl.addEventListener("click", deleteActiveStyle);
+  exportStyleEl.addEventListener("click", exportActiveStyle);
   showVersionsEl.addEventListener("click", toggleVersions);
   document.querySelectorAll(".chip").forEach((chip) => {
     chip.addEventListener("click", () => applyPromptChip(chip.dataset.prompt || chip.textContent));
@@ -208,6 +210,34 @@
     currentDraft = null;
     showStatus("Preview discarded.");
     await loadPageState();
+  }
+
+  async function exportActiveStyle() {
+    if (!currentProject) return;
+    const morphix = RestyleStorage.exportToMorphix(currentProject);
+    if (!morphix) {
+      showStatus("Could not export this style.", true);
+      return;
+    }
+    const filename = sanitizeFilename(currentProject.name || "style") + ".morphix";
+    downloadJson(morphix, filename);
+    showStatus("Style exported as " + filename);
+  }
+
+  function sanitizeFilename(name) {
+    return name.replace(/[^a-zA-Z0-9\-_\s]/g, "").trim().replace(/\s+/g, "-") || "morphix-style";
+  }
+
+  function downloadJson(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async function toggleActiveStyle() {
