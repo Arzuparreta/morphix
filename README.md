@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/branding/morphix-hero-strip.png" alt="Morphix — Extension popup and Community Gallery" width="720">
+  <img src="docs/branding/morphix-hero-strip.png" alt="Morphix — Community Gallery and Extension Popup" width="880">
 
   # Morphix
 
