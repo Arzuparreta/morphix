@@ -1,1 +1,9 @@
 .gstack/
+node_modules/
+.env.local
+.env*.local
+*.log
+.DS_Store
+moprhix-ui-broken.png
+supabase/.branches/
+supabase/.temp/

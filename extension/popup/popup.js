@@ -55,7 +55,7 @@
   function updateThemeIcon() {
     const isDark = !document.documentElement.hasAttribute("data-theme") ||
       document.documentElement.getAttribute("data-theme") !== "light";
-    themeIconEl.textContent = isDark ? "☀" : "🌙";
+    themeIconEl.dataset.mode = isDark ? "dark" : "light";
     themeToggleEl.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
   }
   updateThemeIcon();

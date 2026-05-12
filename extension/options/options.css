@@ -12,6 +12,7 @@
   --field: rgba(255, 255, 255, 0.06);
   --accent: #a855f7;
   --accent-2: #c084fc;
+  --accent-soft: rgba(168, 85, 247, 0.14);
   --danger: #ef4444;
   --success: #22c55e;
   --radius-shell: 18px;
@@ -34,6 +35,7 @@
   --field: rgba(255, 255, 255, 0.78);
   --accent: #7c3aed;
   --accent-2: #8b5cf6;
+  --accent-soft: rgba(124, 58, 237, 0.1);
   --danger: #c5332b;
   --success: #22b879;
   --shadow: 0 20px 52px rgba(37, 54, 92, 0.14);
@@ -490,20 +492,48 @@ pre {
   right: 16px;
   width: 36px;
   height: 36px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
   border-radius: var(--radius-tight);
   background: var(--glass);
   color: var(--fg);
-  font-size: 16px;
+  padding: 0;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .theme-toggle-btn:hover {
   background: var(--line);
+}
+
+.theme-icon {
+  display: grid;
+  place-items: center;
+}
+
+.theme-toggle-btn svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-icon .moon-icon {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon .sun-icon {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon .moon-icon {
+  display: block;
 }
 
 .style-actions .export {
