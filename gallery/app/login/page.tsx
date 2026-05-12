@@ -38,7 +38,10 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username: username.trim(), display_name: username.trim() } },
+      options: {
+        data: { username: username.trim(), display_name: username.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
     if (authError) { setError(authError.message); setLoading(false); return; }
