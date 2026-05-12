@@ -183,16 +183,14 @@ async function handleMessage(message, sender) {
 async function handleExternalMessage(message, sender) {
   if (message.type === "MORPHIX_INSTALL_STYLE" && message.slug) {
     try {
-      // Download the .morphix from the gallery API
-      const config = await MorphixGallery.getConfig();
-      if (!config?.supabaseUrl) {
-        return { ok: false, error: "Gallery not configured" };
-      }
+      // Download the .morphix from the gallery API using hardcoded Supabase config
+      const supabaseUrl = MorphixGallery.getSupabaseUrl();
+      const supabaseAnonKey = MorphixGallery.getSupabaseAnonKey();
 
-      const res = await fetch(`${config.supabaseUrl}/rest/v1/styles?select=morphix_file&slug=eq.${encodeURIComponent(message.slug)}&is_published=eq.true&limit=1`, {
+      const res = await fetch(`${supabaseUrl}/rest/v1/styles?select=morphix_file,id&slug=eq.${encodeURIComponent(message.slug)}&is_published=eq.true&limit=1`, {
         headers: {
-          "apikey": config.supabaseAnonKey,
-          "Authorization": `Bearer ${config.supabaseAnonKey}`,
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
         },
       });
 
@@ -207,11 +205,11 @@ async function handleExternalMessage(message, sender) {
 
       // Record the install
       try {
-        await fetch(`${config.supabaseUrl}/rest/v1/installs`, {
+        await fetch(`${supabaseUrl}/rest/v1/installs`, {
           method: "POST",
           headers: {
-            "apikey": config.supabaseAnonKey,
-            "Authorization": `Bearer ${config.supabaseAnonKey}`,
+            "apikey": supabaseAnonKey,
+            "Authorization": `Bearer ${supabaseAnonKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({

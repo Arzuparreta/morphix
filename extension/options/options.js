@@ -14,11 +14,10 @@
   const importFileEl = document.getElementById("import-file");
   const importStatusEl = document.getElementById("import-status");
 
-  const galleryUrlEl = document.getElementById("gallery-url");
-  const galleryKeyEl = document.getElementById("gallery-anon-key");
   const galleryEmailEl = document.getElementById("gallery-email");
   const galleryPassEl = document.getElementById("gallery-password");
   const saveGalleryEl = document.getElementById("save-gallery");
+  const signupGalleryEl = document.getElementById("signup-gallery");
   const signoutGalleryEl = document.getElementById("signout-gallery");
   const galleryStatusEl = document.getElementById("gallery-status");
 
@@ -35,6 +34,7 @@
   importBtnEl.addEventListener("click", () => importFileEl.click());
   importFileEl.addEventListener("change", handleImportFile);
   saveGalleryEl.addEventListener("click", saveGalleryConfig);
+  signupGalleryEl.addEventListener("click", signUpGallery);
   signoutGalleryEl.addEventListener("click", signOutGallery);
   themeToggleEl.addEventListener("click", toggleTheme);
 
@@ -415,39 +415,58 @@
   // ── Gallery ────────────────────────────────────────
 
   async function loadGalleryConfig() {
-    const config = await MorphixGallery.getConfig();
-    if (config) {
-      galleryUrlEl.value = config.supabaseUrl || "";
-      galleryKeyEl.value = config.supabaseAnonKey || "";
-    }
     const authed = await MorphixGallery.isAuthenticated();
+    const config = await MorphixGallery.getConfig();
+    if (config?.userId) {
+      galleryEmailEl.value = config.email || "";
+    }
     galleryStatusEl.textContent = authed ? "Connected to gallery" : "Not connected";
   }
 
   async function saveGalleryConfig() {
-    const url = galleryUrlEl.value.trim();
-    const key = galleryKeyEl.value.trim();
     const email = galleryEmailEl.value.trim();
     const password = galleryPassEl.value;
 
-    if (!url || !key) {
-      galleryStatusEl.textContent = "URL and anon key are required";
+    if (!email || !password) {
+      galleryStatusEl.textContent = "Email and password are required";
       return;
     }
 
-    await MorphixGallery.saveConfig({ supabaseUrl: url, supabaseAnonKey: key });
+    galleryStatusEl.textContent = "Connecting...";
+    try {
+      await MorphixGallery.signIn(email, password);
+      // Store email for convenience
+      const config = (await MorphixGallery.getConfig()) || {};
+      config.email = email;
+      await MorphixGallery.saveConfig(config);
+      galleryStatusEl.textContent = "Connected to gallery";
+      galleryPassEl.value = "";
+    } catch (e) {
+      galleryStatusEl.textContent = "Sign in failed: " + e.message;
+    }
+  }
 
-    if (email && password) {
-      galleryStatusEl.textContent = "Connecting...";
-      try {
-        await MorphixGallery.signIn(email, password);
-        galleryStatusEl.textContent = "Connected to gallery";
-        galleryPassEl.value = "";
-      } catch (e) {
-        galleryStatusEl.textContent = "Config saved, but login failed: " + e.message;
-      }
-    } else {
-      galleryStatusEl.textContent = "Gallery config saved.";
+  async function signUpGallery() {
+    const email = galleryEmailEl.value.trim();
+    const password = galleryPassEl.value;
+    const username = email.split("@")[0];
+
+    if (!email || !password) {
+      galleryStatusEl.textContent = "Email and password are required";
+      return;
+    }
+    if (password.length < 6) {
+      galleryStatusEl.textContent = "Password must be at least 6 characters";
+      return;
+    }
+
+    galleryStatusEl.textContent = "Creating account...";
+    try {
+      await MorphixGallery.signUp(email, password, username);
+      galleryStatusEl.textContent = "Account created! Check your email to confirm, then sign in.";
+      galleryPassEl.value = "";
+    } catch (e) {
+      galleryStatusEl.textContent = "Sign up failed: " + e.message;
     }
   }
 
@@ -457,11 +476,6 @@
   }
 
   async function shareStyleToGallery(project) {
-    const config = await MorphixGallery.getConfig();
-    if (!config || !config.supabaseUrl) {
-      setImportStatus("Gallery not configured. Set up Supabase above.", true);
-      return;
-    }
     const authed = await MorphixGallery.isAuthenticated();
     if (!authed) {
       setImportStatus("Sign in to the gallery first (use email/password above).", true);

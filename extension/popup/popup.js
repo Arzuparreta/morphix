@@ -269,20 +269,10 @@
   async function shareToGallery() {
     if (!currentProject) return;
 
-    // Check gallery config
-    const config = await MorphixGallery.getConfig();
-    if (!config || !config.supabaseUrl) {
-      showStatus(
-        "Gallery not configured. Open options to set up your Supabase URL and anon key.",
-        true
-      );
-      return;
-    }
-
     // Check auth
     const authed = await MorphixGallery.isAuthenticated();
     if (!authed) {
-      showStatus("Sign in to the gallery first. Open options to configure.", true);
+      showStatus("Sign in to the gallery first. Open options to create an account or sign in.", true);
       return;
     }
 

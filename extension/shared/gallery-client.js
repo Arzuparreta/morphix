@@ -1,10 +1,15 @@
 // shared/gallery-client.js
 // Lightweight Supabase client for the browser extension.
 // No bundler needed — uses the Supabase REST API directly via fetch.
-// Store your Supabase URL and anon key in extension storage.
+// Supabase URL and anon key are hardcoded — they're public by design.
+// Users only need an account (email + password) on the Morphix Gallery.
 
 (function () {
   const ext = globalThis.RestyleBrowserApi || globalThis.browser || globalThis.chrome;
+
+  // Hardcoded Morphix Gallery Supabase config (public anon key)
+  const SUPABASE_URL = "https://srmqjagfdedeovkiqpuj.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNybXFqYWdmZGVkZW92a2lxcHVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MzE3NzAsImV4cCI6MjA5NDEwNzc3MH0.w_7XjUyRKxGmrc3_Z9qsqj2Dy1lCCDmMV_Z_ILLyg3Q";
 
   const GALLERY_CONFIG_KEY = "gallery_config";
 
@@ -17,25 +22,28 @@
     await ext.storage.local.set({ [GALLERY_CONFIG_KEY]: config });
   }
 
-  async function ensureConfig() {
-    const config = await getConfig();
-    if (!config || !config.supabaseUrl || !config.supabaseAnonKey) {
-      throw new Error(
-        "Gallery not configured. Set your Supabase URL and anon key in the extension options."
-      );
-    }
-    return config;
+  function getSupabaseUrl() {
+    return SUPABASE_URL;
+  }
+
+  function getSupabaseAnonKey() {
+    return SUPABASE_ANON_KEY;
+  }
+
+  function ensureConfig() {
+    return { supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY };
   }
 
   async function apiCall(path, options = {}) {
-    const config = await ensureConfig();
+    const config = ensureConfig();
     const { method = "GET", body, headers = {} } = options;
+    const token = await getAccessToken();
 
     const res = await fetch(`${config.supabaseUrl}/rest/v1${path}`, {
       method,
       headers: {
         "apikey": config.supabaseAnonKey,
-        "Authorization": `Bearer ${config.accessToken || config.supabaseAnonKey}`,
+        "Authorization": `Bearer ${token || config.supabaseAnonKey}`,
         "Content-Type": "application/json",
         ...headers,
       },
@@ -55,12 +63,16 @@
 
   // ── Auth ─────────────────────────────────────────────
 
+  async function getAccessToken() {
+    const config = await getConfig();
+    return config?.accessToken || null;
+  }
+
   async function signIn(email, password) {
-    const config = await ensureConfig();
-    const res = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=password`, {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: {
-        "apikey": config.supabaseAnonKey,
+        "apikey": SUPABASE_ANON_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
@@ -70,6 +82,9 @@
       throw new Error(err.error_description || "Login failed");
     }
     const data = await res.json();
+
+    // Store only auth tokens, not Supabase config (that's hardcoded now)
+    const config = (await getConfig()) || {};
     config.accessToken = data.access_token;
     config.refreshToken = data.refresh_token;
     config.userId = data.user?.id;
@@ -77,18 +92,42 @@
     return data;
   }
 
+  async function signUp(email, password, username) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        data: { username, display_name: username },
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error_description: "Signup failed" }));
+      throw new Error(err.error_description || err.msg || "Signup failed");
+    }
+    return res.json();
+  }
+
   async function signOut() {
-    const config = await ensureConfig();
-    delete config.accessToken;
-    delete config.refreshToken;
-    delete config.userId;
-    await saveConfig(config);
+    const config = await getConfig();
+    if (config) {
+      delete config.accessToken;
+      delete config.refreshToken;
+      delete config.userId;
+      await saveConfig(config);
+    }
   }
 
   async function getCurrentUser() {
     try {
-      const config = await ensureConfig();
-      if (!config.accessToken) return null;
+      const token = await getAccessToken();
+      if (!token) return null;
+      const config = await getConfig();
+      if (!config?.userId) return null;
       const data = await apiCall("/profiles?id=eq." + encodeURIComponent(config.userId), {
         headers: { "Accept-Profile": "gallery" },
       });
@@ -99,15 +138,19 @@
   }
 
   async function isAuthenticated() {
-    const config = await getConfig();
-    return !!(config && config.accessToken);
+    const token = await getAccessToken();
+    return !!token;
   }
 
   // ── Styles ───────────────────────────────────────────
 
   async function uploadStyle(morphixJson, tags) {
+    const config = await getConfig();
+    if (!config?.accessToken) throw new Error("Sign in to share styles.");
+    if (!config?.userId) throw new Error("Account setup incomplete. Try signing in again.");
+
     const body = {
-      author_id: (await ensureConfig()).userId,
+      author_id: config.userId,
       name: morphixJson.style.name,
       slug: "", // will be generated by the DB function
       description: morphixJson.style.description || "",
@@ -117,11 +160,10 @@
     };
 
     // Use the upload API endpoint with auth
-    const config = await ensureConfig();
-    const res = await fetch(`${config.supabaseUrl}/rest/v1/rpc/upload_style`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upload_style`, {
       method: "POST",
       headers: {
-        "apikey": config.supabaseAnonKey,
+        "apikey": SUPABASE_ANON_KEY,
         "Authorization": `Bearer ${config.accessToken}`,
         "Content-Type": "application/json",
       },
@@ -130,10 +172,10 @@
 
     if (!res.ok) {
       // Fallback: insert directly into styles table
-      const insertRes = await fetch(`${config.supabaseUrl}/rest/v1/styles`, {
+      const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/styles`, {
         method: "POST",
         headers: {
-          "apikey": config.supabaseAnonKey,
+          "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${config.accessToken}`,
           "Content-Type": "application/json",
           "Prefer": "return=representation",
@@ -165,12 +207,15 @@
   self.MorphixGallery = {
     // Auth
     signIn,
+    signUp,
     signOut,
     getCurrentUser,
     isAuthenticated,
-    // Config
+    // Config (read-only for consumers that check config)
     getConfig,
     saveConfig,
+    getSupabaseUrl,
+    getSupabaseAnonKey,
     // Styles
     uploadStyle,
     getStylesForSite,
