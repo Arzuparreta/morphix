@@ -9,6 +9,7 @@
     "declarativeNetRequestWithHostAccess",
     "scripting",
     "storage",
+    "unlimitedStorage",
     "tabs"
   ],
   "host_permissions": [

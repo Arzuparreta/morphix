@@ -387,7 +387,7 @@
 
     setImportStatus("Importing style...");
     try {
-      const result = await RestyleStorage.importFromMorphix(morphixJson, "sync");
+      const result = await RestyleStorage.importFromMorphix(morphixJson, "saved");
       setImportStatus("Imported \"" + result.name + "\".");
       const response = await send({ type: "RESTYLE_GET_OPTIONS" });
       if (response.ok) renderLibrary(response.projects || []);

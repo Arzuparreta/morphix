@@ -4,6 +4,8 @@
   const LEGACY_SESSION_KEY = "session_styles";
   const SYNC_PROJECTS_KEY = "style_projects_v1";
   const SESSION_PROJECTS_KEY = "session_style_projects_v1";
+  const SAVED_PROJECTS_KEY = "saved_style_projects_v2";
+  const MIGRATED_FLAG_KEY = "saved_projects_migrated_to_local";
 
   function nowIso() {
     return new Date().toISOString();
@@ -194,11 +196,31 @@
   }
 
   async function getSavedProjects() {
-    return getStoredProjects(ext.storage.sync, SYNC_PROJECTS_KEY, LEGACY_SYNC_KEY);
+    const local = await ext.storage.local.get({ [SAVED_PROJECTS_KEY]: null, [MIGRATED_FLAG_KEY]: false });
+    if (Array.isArray(local[SAVED_PROJECTS_KEY])) {
+      return local[SAVED_PROJECTS_KEY].map(normalizeProject);
+    }
+
+    let projects = [];
+    try {
+      const syncResult = await ext.storage.sync.get({ [SYNC_PROJECTS_KEY]: null, [LEGACY_SYNC_KEY]: [] });
+      const stored = Array.isArray(syncResult[SYNC_PROJECTS_KEY]) ? syncResult[SYNC_PROJECTS_KEY].map(normalizeProject) : null;
+      if (stored) {
+        projects = stored;
+      } else {
+        const legacy = Array.isArray(syncResult[LEGACY_SYNC_KEY]) ? syncResult[LEGACY_SYNC_KEY] : [];
+        projects = legacy.map(legacyStyleToProject);
+      }
+      await ext.storage.local.set({ [SAVED_PROJECTS_KEY]: projects.map(normalizeProject), [MIGRATED_FLAG_KEY]: true });
+      await ext.storage.sync.remove([SYNC_PROJECTS_KEY, LEGACY_SYNC_KEY]);
+    } catch (_e) {
+      await ext.storage.local.set({ [SAVED_PROJECTS_KEY]: [], [MIGRATED_FLAG_KEY]: true });
+    }
+    return projects;
   }
 
   async function setSavedProjects(projects) {
-    await ext.storage.sync.set({ [SYNC_PROJECTS_KEY]: projects.map(normalizeProject) });
+    await ext.storage.local.set({ [SAVED_PROJECTS_KEY]: projects.map(normalizeProject), [MIGRATED_FLAG_KEY]: true });
   }
 
   async function getSessionProjects() {
@@ -212,14 +234,14 @@
   async function getAllProjects() {
     const saved = await getSavedProjects();
     const session = await getSessionProjects();
-    return saved.map((project) => ({ ...project, storage: "sync" }))
+    return saved.map((project) => ({ ...project, storage: "saved" }))
       .concat(session.map((project) => ({ ...project, storage: "session" })));
   }
 
   async function findProject(id) {
     const saved = await getSavedProjects();
     const savedProject = saved.find((project) => project.id === id);
-    if (savedProject) return { project: savedProject, storage: "sync", projects: saved };
+    if (savedProject) return { project: savedProject, storage: "saved", projects: saved };
 
     const session = await getSessionProjects();
     const sessionProject = session.find((project) => project.id === id);
@@ -235,7 +257,7 @@
 
   async function createProjectFromDraft(draft, options) {
     const scope = options.scope || "exact";
-    const storage = scope === "session" ? "session" : "sync";
+    const storage = scope === "session" ? "session" : "saved";
     const pattern = patternForScope(scope, options.url);
     const project = makeProject({
       name: options.name || draft.description || draft.prompt || "Untitled style",
@@ -520,7 +542,7 @@
       hits: 0
     };
 
-    const targetStorage = storage || "sync";
+    const targetStorage = storage || "saved";
     const projects = targetStorage === "session" ? await getSessionProjects() : await getSavedProjects();
 
     const similar = findSimilarProject(project, projects);
