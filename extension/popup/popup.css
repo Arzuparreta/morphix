@@ -477,6 +477,20 @@ body.is-busy #apply .button-label::after {
   font-size: 12px;
 }
 
+.warnings[data-level="info"] {
+  border-color: color-mix(in srgb, var(--line) 78%, var(--accent));
+  background: var(--panel-soft);
+  color: var(--muted);
+}
+
+.warning-critical {
+  color: var(--warning);
+}
+
+.warning-info {
+  color: var(--muted);
+}
+
 .sent {
   color: var(--muted);
 }

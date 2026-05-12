@@ -4,6 +4,7 @@ const ext = self.RestyleBrowserApi;
 
 const DNR_RULE_BASE = 9000;
 const DRAFTS_KEY = "style_drafts_by_tab_v1";
+const MAX_SITE_ROUTE_CONTEXTS = 3;
 const injectedCssByTab = new Map();
 const injectedPayloadsByTab = new Map();
 
@@ -29,7 +30,7 @@ async function handleMessage(message, sender) {
   if (!message || !message.type) return { ok: false, error: "Missing message type" };
 
   if (message.type === "RESTYLE_CREATE_DRAFT" || message.type === "RESTYLE_APPLY_REQUEST") {
-    return createDraftRestyle(message.tabId, message.prompt, message.projectId || null);
+    return createDraftRestyle(message.tabId, message.prompt, message.projectId || null, message.scope || "exact");
   }
 
   if (message.type === "RESTYLE_DISCARD_DRAFT") {
@@ -228,7 +229,7 @@ async function handleExternalMessage(message, sender) {
   return { ok: false, error: "Unknown external message type" };
 }
 
-async function createDraftRestyle(tabId, prompt, projectId) {
+async function createDraftRestyle(tabId, prompt, projectId, scope) {
   if (!tabId) throw new Error("No active tab found");
   if (!prompt || !prompt.trim()) throw new Error("Enter a restyle prompt first");
 
@@ -241,11 +242,8 @@ async function createDraftRestyle(tabId, prompt, projectId) {
 
   if (projectId) await removeInjectedStyle(tabId, projectId).catch(() => {});
 
-  const contextResult = await ext.scripting.executeScript({
-    target: { tabId },
-    func: () => window.RestyleExtract.extractPageContext()
-  });
-  const pageContext = contextResult[0] && contextResult[0].result;
+  const generationContext = await buildGenerationContext(tabId, scope || "exact");
+  const pageContext = generationContext.pageContext;
   if (!pageContext) throw new Error("Could not extract page context");
 
   const styleContext = projectId ? await buildStyleContext(projectId) : null;
@@ -261,9 +259,20 @@ async function createDraftRestyle(tabId, prompt, projectId) {
     prompt: prompt.trim(),
     pageContext,
     validation: null,
+    generationMeta: generationContext.meta,
     created_at: new Date().toISOString()
   };
   draft.validation = await validateDraft(tabId, draft);
+  if (shouldAttemptAutoRepair(draft.validation)) {
+    const repaired = await attemptValidationRepair(prompt.trim(), pageContext, styleContext, draft, draft.validation);
+    if (repaired) {
+      draft.css = repaired.css;
+      draft.js = repaired.js;
+      draft.description = repaired.description || draft.description;
+      draft.validation = repaired.validation;
+    }
+  }
+  draft.validation = finalizeValidation(draft.validation, draft.generationMeta);
 
   await injectPayload(tabId, draft);
   await setDraftForTab(tabId, draft);
@@ -302,6 +311,219 @@ async function callAiProvider(prompt, pageContext, styleContext) {
     const repairedText = await repairAiJson(providerConfig, text, error);
     return parseAiJson(repairedText);
   }
+}
+
+async function buildGenerationContext(tabId, scope) {
+  const currentPage = await extractPageContextFromTab(tabId);
+  if (!currentPage) throw new Error("Could not extract page context");
+  if (scope !== "domain") {
+    return {
+      pageContext: currentPage,
+      meta: {
+        scope,
+        routeSampleCount: 1,
+        partialRouteCoverage: false
+      }
+    };
+  }
+
+  const siteContext = await collectSiteRouteContexts(tabId, currentPage);
+  return {
+    pageContext: siteContext.pageContext,
+    meta: siteContext.meta
+  };
+}
+
+async function extractPageContextFromTab(tabId) {
+  const contextResult = await ext.scripting.executeScript({
+    target: { tabId },
+    func: () => window.RestyleExtract.extractPageContext()
+  });
+  return contextResult[0] && contextResult[0].result;
+}
+
+async function collectSiteRouteContexts(sourceTabId, currentPage) {
+  const candidates = selectRouteCandidates(currentPage);
+  const sampledPages = [];
+  let partialRouteCoverage = candidates.length > 0;
+
+  for (const candidate of candidates) {
+    const page = await samplePageContext(candidate.url).catch(() => null);
+    if (!page) continue;
+    sampledPages.push({
+      url: page.url,
+      title: page.title,
+      route_label: page.route_label,
+      viewport: page.viewport,
+      nodes: page.nodes
+    });
+    if (sampledPages.length >= MAX_SITE_ROUTE_CONTEXTS - 1) break;
+  }
+
+  partialRouteCoverage = sampledPages.length < Math.min(candidates.length, MAX_SITE_ROUTE_CONTEXTS - 1);
+  const allPages = [stripRouteCandidates(currentPage)].concat(sampledPages);
+  return {
+    pageContext: {
+      mode: "site",
+      current_page: stripRouteCandidates(currentPage),
+      sampled_pages: sampledPages,
+      stable_anchors: inferStableAnchors(allPages),
+      coverage: {
+        sampled_count: allPages.length,
+        requested_extra_routes: Math.min(candidates.length, MAX_SITE_ROUTE_CONTEXTS - 1),
+        partial: partialRouteCoverage
+      }
+    },
+    meta: {
+      scope: "domain",
+      routeSampleCount: allPages.length,
+      partialRouteCoverage
+    }
+  };
+}
+
+function stripRouteCandidates(pageContext) {
+  const copy = { ...pageContext };
+  delete copy.route_candidates;
+  return copy;
+}
+
+function selectRouteCandidates(currentPage) {
+  const seenLabels = new Set([currentPage.route_label || "current"]);
+  const seenUrls = new Set([currentPage.url]);
+  const candidates = [];
+  for (const candidate of currentPage.route_candidates || []) {
+    if (!candidate || !candidate.url || seenUrls.has(candidate.url)) continue;
+    if (seenLabels.has(candidate.label)) continue;
+    seenUrls.add(candidate.url);
+    seenLabels.add(candidate.label);
+    candidates.push(candidate);
+    if (candidates.length >= MAX_SITE_ROUTE_CONTEXTS - 1) break;
+  }
+  return candidates;
+}
+
+async function samplePageContext(url) {
+  const tab = await ext.tabs.create({ url, active: false });
+  try {
+    await waitForTabComplete(tab.id);
+    await enableCspBypassForTab(tab.id);
+    await ensureContentScript(tab.id, "/content/extract.js");
+    await ensureContentScript(tab.id, "/content/inject.js");
+    return await extractPageContextFromTab(tab.id);
+  } finally {
+    await ext.tabs.remove(tab.id).catch(() => {});
+  }
+}
+
+function waitForTabComplete(tabId) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ext.tabs.onUpdated.removeListener(onUpdated);
+      reject(new Error("Timed out waiting for route sample"));
+    }, 12000);
+
+    function onUpdated(updatedTabId, changeInfo) {
+      if (updatedTabId !== tabId) return;
+      if (changeInfo.status === "complete") {
+        clearTimeout(timeout);
+        ext.tabs.onUpdated.removeListener(onUpdated);
+        resolve();
+      }
+    }
+
+    ext.tabs.onUpdated.addListener(onUpdated);
+  });
+}
+
+function inferStableAnchors(pageContexts) {
+  const counts = new Map();
+  for (const page of pageContexts) {
+    for (const node of page.nodes || []) {
+      const parts = [node.tag];
+      if (node.role) parts.push(`role:${node.role}`);
+      if (node.id) parts.push(`#${node.id}`);
+      if (node.class) parts.push(`.${String(node.class).split(/\s+/).slice(0, 2).join(".")}`);
+      const key = parts.join("");
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .filter((entry) => entry[1] > 1)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map((entry) => ({ selector_hint: entry[0], occurrences: entry[1] }));
+}
+
+function shouldAttemptAutoRepair(validation) {
+  return Boolean(validation && validation.summary && validation.summary.criticalCount > 0);
+}
+
+async function attemptValidationRepair(prompt, pageContext, styleContext, draft, validation) {
+  const providerConfig = await RestyleProviders.getProviderConfig();
+  const repairPrompt = [
+    "Repair this Morphix restyle so it avoids critical validation failures while preserving the existing visual direction.",
+    "Do not remove expressive selectors unless they are the source of a critical issue.",
+    "Interactive and route-specific selectors may remain if they are valid.",
+    "",
+    "Original user request:",
+    prompt,
+    "",
+    "Current generated style:",
+    JSON.stringify({
+      css: draft.css,
+      js: draft.js,
+      description: draft.description
+    }, null, 2),
+    "",
+    "Validation findings:",
+    JSON.stringify((validation.findings || []).filter((item) => item.severity === "critical"), null, 2)
+  ].join("\n");
+
+  const text = await RestyleProviders.callProvider(
+    providerConfig,
+    RestylePrompts.RESTYLE_SYSTEM_PROMPT,
+    RestylePrompts.buildRestyleUserPrompt(repairPrompt, pageContext, styleContext),
+    12000,
+    { structured: true }
+  );
+  let repaired;
+  try {
+    repaired = parseAiJson(text);
+  } catch (error) {
+    const repairedText = await repairAiJson(providerConfig, text, error);
+    repaired = parseAiJson(repairedText);
+  }
+  const nextDraft = {
+    css: repaired.css || "",
+    js: repaired.js || "",
+    description: repaired.description || draft.description
+  };
+  nextDraft.validation = await validateDraft(draft.tabId, nextDraft);
+  nextDraft.validation = finalizeValidation(nextDraft.validation, {
+    autoRepaired: true,
+    routeSampleCount: draft.generationMeta && draft.generationMeta.routeSampleCount,
+    partialRouteCoverage: draft.generationMeta && draft.generationMeta.partialRouteCoverage
+  });
+  return nextDraft;
+}
+
+function finalizeValidation(validation, meta) {
+  if (!validation || !validation.summary) return validation;
+  const next = {
+    ...validation,
+    summary: {
+      ...validation.summary
+    }
+  };
+  if (meta && meta.autoRepaired) next.summary.autoRepaired = true;
+  if (meta && typeof meta.routeSampleCount === "number") {
+    next.summary.siteCoverage = {
+      routeSampleCount: meta.routeSampleCount,
+      partial: Boolean(meta.partialRouteCoverage)
+    };
+  }
+  return next;
 }
 
 function parseAiJson(text) {
@@ -391,7 +613,26 @@ async function validateDraft(tabId, draft) {
         js: draft.js
       }
     ]
-  }).catch((error) => [{ result: { ok: false, warnings: [error.message || String(error)] } }]);
+  }).catch((error) => [{
+    result: {
+      ok: false,
+      warnings: [error.message || String(error)],
+      findings: [{
+        type: "syntax",
+        severity: "critical",
+        message: error.message || String(error),
+        details: null
+      }],
+      summary: {
+        criticalCount: 1,
+        infoCount: 0,
+        categories: { syntax: 1 },
+        autoRepaired: false,
+        siteCoverage: null
+      },
+      selectorHits: []
+    }
+  }]);
   return result[0] && result[0].result;
 }
 
@@ -621,3 +862,11 @@ async function enableCspBypassForTab(tabId) {
     ]
   });
 }
+
+self.RestyleServiceWorkerTest = {
+  finalizeValidation,
+  inferStableAnchors,
+  selectRouteCandidates,
+  shouldAttemptAutoRepair,
+  stripRouteCandidates
+};

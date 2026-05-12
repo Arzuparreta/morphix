@@ -2,6 +2,7 @@
   const MAX_NODES = 150;
   const TEXT_LIMIT = 90;
   const CLASS_LIMIT = 6;
+  const MAX_ROUTE_CANDIDATES = 18;
   const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "PATH", "META", "LINK"]);
 
   function compact(value, limit) {
@@ -64,6 +65,54 @@
     return summary;
   }
 
+  function classifyRoute(rawUrl) {
+    try {
+      const url = new URL(rawUrl, location.href);
+      const path = url.pathname || "/";
+      if (path === "/" || path === "/feed/explore") return "home";
+      if (path === "/watch") return "watch";
+      if (path === "/results" || path === "/search") return "search";
+      if (path.startsWith("/shorts")) return "shorts";
+      if (path.startsWith("/playlist")) return "playlist";
+      if (path.startsWith("/channel/") || path.startsWith("/c/") || path.startsWith("/@") || path.startsWith("/user/")) return "channel";
+      if (path.startsWith("/feed/")) return path.slice(6).split("/")[0] || "feed";
+      return path.split("/").filter(Boolean)[0] || "root";
+    } catch (_error) {
+      return "unknown";
+    }
+  }
+
+  function extractRouteCandidates() {
+    const links = Array.from(document.querySelectorAll("a[href]"));
+    const seen = new Set();
+    const items = [];
+
+    for (const link of links) {
+      if (!(link instanceof HTMLAnchorElement) || !link.href) continue;
+      let url;
+      try {
+        url = new URL(link.href, location.href);
+      } catch (_error) {
+        continue;
+      }
+      if (url.origin !== location.origin) continue;
+      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+      url.hash = "";
+      const key = url.toString();
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      items.push({
+        url: key,
+        label: classifyRoute(key),
+        text: compact(link.textContent || link.getAttribute("aria-label") || link.title || "", TEXT_LIMIT)
+      });
+      if (items.length >= MAX_ROUTE_CANDIDATES) break;
+    }
+
+    return items;
+  }
+
   function extractPageContext() {
     const nodes = [];
     const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_ELEMENT);
@@ -79,11 +128,13 @@
     return {
       url: location.href,
       title: document.title,
+      route_label: classifyRoute(location.href),
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight
       },
-      nodes
+      nodes,
+      route_candidates: extractRouteCandidates()
     };
   }
 

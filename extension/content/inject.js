@@ -63,8 +63,10 @@
   function validateStylePayload(payload) {
     const css = String(payload && payload.css ? payload.css : "");
     const js = String(payload && payload.js ? payload.js : "");
-    const warnings = [];
+    const findings = [];
     const selectorHits = [];
+    let matchedStableSelector = false;
+    let hasOnlyContextualMisses = false;
 
     if (css.trim()) {
       try {
@@ -73,35 +75,49 @@
           sheet.replaceSync(css);
         }
       } catch (error) {
-        warnings.push("CSS syntax may be invalid: " + (error.message || String(error)));
+        findings.push(makeFinding("syntax", "critical", "CSS syntax may be invalid: " + (error.message || String(error))));
       }
 
       const selectors = extractSelectors(css).slice(0, 30);
       for (const selector of selectors) {
-        try {
-          const count = document.querySelectorAll(selector).length;
-          selectorHits.push({ selector, count });
-          if (count === 0) warnings.push(`Selector did not match anything: ${selector}`);
-        } catch (_error) {
-          selectorHits.push({ selector, count: null });
+        const analysis = analyzeSelector(selector);
+        selectorHits.push({
+          selector,
+          count: analysis.count,
+          baseSelector: analysis.baseSelector,
+          baseCount: analysis.baseCount,
+          category: analysis.category,
+          severity: analysis.severity
+        });
+        if (analysis.baseCount > 0 || analysis.count > 0) matchedStableSelector = true;
+        if (analysis.category === "interactive_miss" || analysis.category === "conditional_miss" || analysis.category === "route_specific_miss") {
+          hasOnlyContextualMisses = true;
+        }
+        if (analysis.finding) {
+          findings.push(analysis.finding);
         }
       }
 
-      if (selectors.length && selectorHits.every((item) => item.count === 0 || item.count === null)) {
-        warnings.push("None of the checked selectors matched visible page elements.");
+      if (selectors.length && !matchedStableSelector && !hasOnlyContextualMisses) {
+        findings.push(makeFinding("unknown_selector_miss", "critical", "None of the checked stable selectors matched current page elements."));
       }
     }
 
     if (js.trim()) {
-      warnings.push("This style includes JavaScript. Keep it only if the behavior is expected.");
+      findings.push(makeFinding("js_present", "info", "This style includes JavaScript. Keep it only if the behavior is expected."));
     }
 
-    warnings.push(...findPerformanceWarnings(css, js));
+    findings.push(...findPerformanceWarnings(css, js));
+    const dedupedFindings = dedupeFindings(findings);
+    const warnings = dedupedFindings.map((item) => item.message).slice(0, 8);
+    const summary = summarizeFindings(dedupedFindings);
 
     return {
-      ok: !warnings.length,
-      warnings: Array.from(new Set(warnings)).slice(0, 8),
-      selectorHits
+      ok: summary.criticalCount === 0,
+      warnings,
+      selectorHits,
+      findings: dedupedFindings,
+      summary
     };
   }
 
@@ -111,18 +127,123 @@
     const mediaSelectorBlock = /(?:video|canvas|iframe|\.html5-main-video)[^{]*\{[^}]*\b(?:animation|transition|filter|backdrop-filter|transform|box-shadow)\b/is;
 
     if (broadSelectorBlock.test(css)) {
-      warnings.push("Performance risk: broad selectors apply expensive visual effects to many elements.");
+      warnings.push(makeFinding("performance", "critical", "Performance risk: broad selectors apply expensive visual effects to many elements."));
     }
 
     if (mediaSelectorBlock.test(css)) {
-      warnings.push("Performance risk: media elements are receiving effects that can cause playback lag.");
+      warnings.push(makeFinding("performance", "critical", "Performance risk: media elements are receiving effects that can cause playback lag."));
     }
 
     if (/\b(?:setInterval|setTimeout|requestAnimationFrame|MutationObserver)\b/.test(js)) {
-      warnings.push("Performance risk: generated JavaScript schedules repeated work.");
+      warnings.push(makeFinding("performance", "critical", "Performance risk: generated JavaScript schedules repeated work."));
     }
 
     return warnings;
+  }
+
+  function analyzeSelector(selector) {
+    const selectorText = String(selector || "").trim();
+    const baseSelector = normalizeSelectorForValidation(selectorText);
+    const direct = safeCountSelector(selectorText);
+    const baseCount = baseSelector && baseSelector !== selectorText ? safeCountSelector(baseSelector) : direct;
+    const category = classifySelector(selectorText, direct.count, baseCount.count);
+    const severity = category === "unknown_selector_miss" ? "critical" : "info";
+    const finding = buildSelectorFinding(selectorText, category, severity, direct.count, baseSelector, baseCount.count, direct.error || baseCount.error);
+
+    return {
+      selector: selectorText,
+      count: direct.count,
+      baseSelector,
+      baseCount: baseCount.count,
+      category,
+      severity,
+      finding
+    };
+  }
+
+  function buildSelectorFinding(selector, category, severity, count, baseSelector, baseCount, error) {
+    if (count > 0) return null;
+    if (category === "matched") return null;
+
+    if (category === "interactive_miss") {
+      return makeFinding(category, severity, `Interactive selector did not match in the current state: ${selector}`, { selector, baseSelector, count, baseCount });
+    }
+    if (category === "conditional_miss") {
+      return makeFinding(category, severity, `Conditional selector is not active right now: ${selector}`, { selector, baseSelector, count, baseCount });
+    }
+    if (category === "route_specific_miss") {
+      return makeFinding(category, severity, `Route-specific selector did not match this page shape: ${selector}`, { selector, baseSelector, count, baseCount });
+    }
+    const message = error
+      ? `Selector may be unsupported or invalid: ${selector}`
+      : `Selector did not match anything stable on this page: ${selector}`;
+    return makeFinding(category, severity, message, { selector, baseSelector, count, baseCount });
+  }
+
+  function safeCountSelector(selector) {
+    if (!selector) return { count: 0, error: null };
+    try {
+      return { count: document.querySelectorAll(selector).length, error: null };
+    } catch (error) {
+      return { count: null, error: error };
+    }
+  }
+
+  function normalizeSelectorForValidation(selector) {
+    return String(selector || "")
+      .replace(/:(?:hover|active|focus|focus-visible|focus-within|visited|target)\b/g, "")
+      .replace(/\[(?:aria-expanded|aria-selected|aria-pressed|aria-checked|open|selected|checked|hidden)(?:[~|^$*]?=[^\]]+)?\]/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function classifySelector(selector, count, baseCount) {
+    if (count > 0) return "matched";
+
+    const interactivePattern = /:(?:hover|active|focus|focus-visible|focus-within|visited|target)\b/;
+    const conditionalPattern = /(?:\[(?:aria-expanded|aria-selected|aria-pressed|aria-checked|open|selected|checked|hidden)(?:[~|^$*]?=[^\]]+)?\])|:(?:has|not)\(|:(?:nth-child|nth-of-type)\(/i;
+    const routePattern = /(?:\[(?:page-subtype|tab-identifier|href\^|href\*=|role=|data-testid=)[^\]]*\])|\b(?:ytd-|yt-|tp-yt-|masthead|guide|results|watch|shorts|channel|playlist)\b/i;
+
+    if (interactivePattern.test(selector) && baseCount > 0) return "interactive_miss";
+    if (conditionalPattern.test(selector) && baseCount > 0) return "conditional_miss";
+    if (routePattern.test(selector)) return "route_specific_miss";
+    if (interactivePattern.test(selector) || conditionalPattern.test(selector)) return "conditional_miss";
+    return "unknown_selector_miss";
+  }
+
+  function makeFinding(type, severity, message, details) {
+    return {
+      type,
+      severity,
+      message,
+      details: details || null
+    };
+  }
+
+  function dedupeFindings(findings) {
+    const seen = new Set();
+    return findings.filter((item) => {
+      const key = JSON.stringify([item.type, item.severity, item.message]);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function summarizeFindings(findings) {
+    const summary = {
+      criticalCount: 0,
+      infoCount: 0,
+      categories: {},
+      autoRepaired: false,
+      siteCoverage: null
+    };
+    for (const finding of findings) {
+      if (finding.severity === "critical") summary.criticalCount += 1;
+      else summary.infoCount += 1;
+      summary.categories[finding.type] = (summary.categories[finding.type] || 0) + 1;
+    }
+    return summary;
   }
 
   function extractSelectors(css) {

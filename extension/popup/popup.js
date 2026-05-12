@@ -155,12 +155,31 @@
   }
 
   function renderWarnings(validation) {
-    const warnings = validation && Array.isArray(validation.warnings) ? validation.warnings : [];
+    const findings = validation && Array.isArray(validation.findings) ? validation.findings : [];
+    const summary = validation && validation.summary ? validation.summary : {};
+    const critical = findings.filter((item) => item.severity === "critical");
+    const info = findings.filter((item) => item.severity !== "critical");
+    const warnings = [];
+
+    if (summary.autoRepaired) {
+      warnings.push({ text: "Morphix auto-repaired critical selector issues before showing this preview.", severity: "info" });
+    }
+    if (summary.siteCoverage && summary.siteCoverage.routeSampleCount > 1) {
+      warnings.push({
+        text: `Site coverage: sampled ${summary.siteCoverage.routeSampleCount} route views${summary.siteCoverage.partial ? " with partial coverage" : ""}.`,
+        severity: "info"
+      });
+    }
+    critical.forEach((item) => warnings.push({ text: item.message, severity: "critical" }));
+    info.forEach((item) => warnings.push({ text: item.message, severity: "info" }));
+
     warningsEl.textContent = "";
     warningsEl.classList.toggle("hidden", !warnings.length);
+    warningsEl.dataset.level = critical.length ? "critical" : "info";
     warnings.forEach((warning) => {
       const item = document.createElement("li");
-      item.textContent = warning;
+      item.textContent = warning.text;
+      item.className = warning.severity === "critical" ? "warning-critical" : "warning-info";
       warningsEl.append(item);
     });
   }
@@ -183,7 +202,8 @@
       type: "RESTYLE_CREATE_DRAFT",
       tabId: activeTab.id,
       projectId: currentProject && currentProject.id,
-      prompt
+      prompt,
+      scope: previewScope()
     });
 
     setBusy(false);
@@ -379,6 +399,13 @@
   function selectedScope() {
     const checked = document.querySelector('input[name="scope"]:checked');
     return checked ? checked.value : "exact";
+  }
+
+  function previewScope() {
+    if (!currentProject || !currentProject.url_pattern) return selectedScope();
+    if (currentProject.url_pattern.type === "domain") return "domain";
+    if (currentProject.url_pattern.type === "library") return "library";
+    return "exact";
   }
 
   function firstVersion(project) {

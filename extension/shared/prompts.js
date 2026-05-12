@@ -14,7 +14,8 @@
     "Avoid restyling media playback surfaces unless the user explicitly asks for video/player changes.",
     "The CSS will be injected alongside existing site styles. Use specificity carefully with :is(), :where(), or explicit selectors. Avoid !important unless necessary.",
     "For Shadow DOM, prefer CSS custom property overrides where practical.",
-    "Prefer CSS over JavaScript. Only use JavaScript for user-requested behavior that CSS cannot express."
+    "Prefer CSS over JavaScript. Only use JavaScript for user-requested behavior that CSS cannot express.",
+    "If the request asks for a bold redesign, you may transform the page aggressively, but keep selectors resilient and avoid page-breaking behavior unless the user explicitly asks for it."
   ].join("\n");
 
   function buildRestyleUserPrompt(userPrompt, pageContext, styleContext) {
@@ -47,10 +48,20 @@
       }
     }
 
-    parts.push(
-      "Lightweight page context:",
-      JSON.stringify(pageContext, null, 2)
-    );
+    if (pageContext && pageContext.mode === "site") {
+      parts.push(
+        "Site-wide generation mode:",
+        "Generate a style that should hold across the sampled routes for this domain.",
+        "Prefer selectors and variables that generalize across these routes. Do not overfit to a single sampled page.",
+        "Site context:",
+        JSON.stringify(pageContext, null, 2)
+      );
+    } else {
+      parts.push(
+        "Lightweight page context:",
+        JSON.stringify(pageContext, null, 2)
+      );
+    }
 
     return parts.join("\n");
   }
