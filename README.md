@@ -8,6 +8,11 @@
   [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
   [![GitHub stars](https://img.shields.io/github/stars/Arzuparreta/morphix?style=social)](https://github.com/Arzuparreta/morphix)
 
+  <br/>
+  <a href="https://gallery-eight-beta.vercel.app">
+    <img src="https://img.shields.io/badge/🎨_Community_Gallery-Visit_&_Discover_Styles-6d28d9?style=for-the-badge&logo=vercel&logoColor=white&labelColor=7c3aed" alt="Visit the Morphix Gallery" height="48">
+  </a>
+
 </div>
 
 ---
