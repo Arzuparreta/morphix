@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { StyleCard, StyleCardSkeleton } from "@/components/style-card";
+import { StyleCardSkeleton } from "@/components/style-card";
 import { Sparkles, Download, Palette, Users } from "lucide-react";
-import { getStyles, getPopularTags } from "@/lib/supabase/queries";
-import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Morphix Styles — AI-crafted styles for any website",
-  description:
-    "Discover, share, and install AI-powered custom styles for any website.",
+  description: "Discover, share, and install AI-powered custom styles for any website.",
 };
+
+const POPULAR_TAGS = ["dark", "minimal", "youtube", "github", "reddit", "focus", "colorful"];
+const POPULAR_SITES = ["YouTube", "Reddit", "GitHub", "Twitter", "Gmail", "Wikipedia", "Discord"];
+
+export const dynamic = "force-static";
 
 export default function Home() {
   return (
@@ -59,30 +61,47 @@ export default function Home() {
             <Palette className="h-8 w-8 mx-auto mb-3 text-primary" />
             <h3 className="font-semibold mb-2">AI-powered styles</h3>
             <p className="text-sm text-muted-foreground">
-              Describe what you want and Morphix generates the CSS and JavaScript
-              instantly.
+              Describe what you want and Morphix generates the CSS and JavaScript instantly.
             </p>
           </Card>
           <Card className="p-6 text-center">
             <Download className="h-8 w-8 mx-auto mb-3 text-primary" />
             <h3 className="font-semibold mb-2">One-click install</h3>
             <p className="text-sm text-muted-foreground">
-              Find a style you like? Click install and it&apos;s applied immediately
-              through the extension.
+              Find a style you like? Click install and it&apos;s applied immediately through the extension.
             </p>
           </Card>
           <Card className="p-6 text-center">
             <Users className="h-8 w-8 mx-auto mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Community-driven</h3>
             <p className="text-sm text-muted-foreground">
-              Rate, comment, and curate collections. The best styles rise to the
-              top.
+              Rate, comment, and curate collections. The best styles rise to the top.
             </p>
           </Card>
         </div>
       </section>
 
-      {/* Trending styles */}
+      {/* Popular sites */}
+      <section className="py-16 px-4 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">Popular sites</h2>
+          <Link
+            href="/explore"
+            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground h-9 px-3"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {POPULAR_SITES.map((site) => (
+            <Badge key={site} variant="outline" className="text-sm px-3 py-1.5">
+              <Link href={`/explore?site=${site.toLowerCase()}.com`}>{site}</Link>
+            </Badge>
+          ))}
+        </div>
+      </section>
+
+      {/* Trending (placeholder grid — real data once DB has content) */}
       <section className="py-16 px-4 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Trending this week</h2>
@@ -93,106 +112,24 @@ export default function Home() {
             View all →
           </Link>
         </div>
-        <Suspense fallback={<StyleGridSkeleton count={4} />}>
-          <TrendingStyles />
-        </Suspense>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StyleCardSkeleton key={i} />
+          ))}
+        </div>
       </section>
 
-      {/* Popular tags */}
+      {/* Tags */}
       <section className="py-16 px-4 max-w-5xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Popular tags</h2>
-        <Suspense fallback={<div className="h-8" />}>
-          <PopularTags />
-        </Suspense>
-      </section>
-
-      {/* New styles */}
-      <section className="py-16 px-4 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">New & noteworthy</h2>
-          <Link
-            href="/explore?sort=newest"
-            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground h-9 px-3"
-          >
-            View all →
-          </Link>
-        </div>
-        <Suspense fallback={<StyleGridSkeleton count={4} />}>
-          <NewestStyles />
-        </Suspense>
-      </section>
-    </div>
-  );
-}
-
-// ── Async data components ──────────────────────────────
-
-async function TrendingStyles() {
-  const styles = await getStyles({ sort: "trending", limit: 4 });
-  if (!styles.length) return <EmptyStyles />;
-  return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {styles.map((s) => (
-        <StyleCard key={s.id} style={s} />
-      ))}
-    </div>
-  );
-}
-
-async function NewestStyles() {
-  const styles = await getStyles({ sort: "newest", limit: 4 });
-  if (!styles.length) return <EmptyStyles />;
-  return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {styles.map((s) => (
-        <StyleCard key={s.id} style={s} />
-      ))}
-    </div>
-  );
-}
-
-async function PopularTags() {
-  const tags = await getPopularTags(15);
-  if (!tags.length) {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {["dark", "minimal", "youtube", "github", "reddit", "focus", "colorful"].map(
-          (tag) => (
+        <div className="flex flex-wrap gap-2">
+          {POPULAR_TAGS.map((tag) => (
             <Badge key={tag} variant="outline" className="text-sm px-3 py-1.5">
               <Link href={`/explore?tags=${tag}`}>{tag}</Link>
             </Badge>
-          ),
-        )}
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tags.map((tag) => (
-        <Badge key={tag.slug} variant="outline" className="text-sm px-3 py-1.5">
-          <Link href={`/explore?tags=${tag.slug}`}>{tag.name}</Link>
-        </Badge>
-      ))}
+          ))}
+        </div>
+      </section>
     </div>
-  );
-}
-
-function StyleGridSkeleton({ count = 4 }: { count?: number }) {
-  return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <StyleCardSkeleton key={i} />
-      ))}
-    </div>
-  );
-}
-
-function EmptyStyles() {
-  return (
-    <Card className="p-8 text-center">
-      <p className="text-muted-foreground text-sm">
-        No styles yet. Install the extension and be the first to share!
-      </p>
-    </Card>
   );
 }
