@@ -131,9 +131,10 @@ The gallery runs at `http://localhost:3000`.
 
 1. Open the extension **Options** page.
 2. Scroll to the **Gallery** section.
-3. Enter your Supabase URL and anon key.
-4. Enter your gallery email and password to sign in.
-5. Click **Save & connect**.
+3. Enter your gallery email and password.
+4. Click **Sign in**.
+
+The extension already has the public Supabase project config embedded. You only need gallery credentials.
 
 ### 6. Deploy (optional)
 

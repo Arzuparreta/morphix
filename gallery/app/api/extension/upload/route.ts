@@ -1,10 +1,11 @@
 // app/api/extension/upload/route.ts — upload style from browser extension
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createCookieClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createRequestClient(request);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -67,7 +68,28 @@ export async function POST(request: NextRequest) {
 
 // ── Helpers ───────────────────────────────────────────
 
-async function generateUniqueSlug(supabase: Awaited<ReturnType<typeof createClient>>, name: string) {
+async function createRequestClient(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader) return createCookieClient();
+
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+}
+
+async function generateUniqueSlug(supabase: Awaited<ReturnType<typeof createRequestClient>>, name: string) {
   const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

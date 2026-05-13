@@ -10,26 +10,19 @@ const ThemeContext = createContext<{
 }>({ theme: "dark", toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
 
-  useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem("morphix-theme") as Theme | null;
-    if (stored) {
-      setTheme(stored);
-    } else {
-      setTheme(
-        window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
-      );
-    }
-  }, []);
+    if (stored === "dark" || stored === "light") return stored;
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
   useEffect(() => {
-    if (!mounted) return;
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("morphix-theme", theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   function toggle() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));

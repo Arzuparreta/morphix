@@ -31,8 +31,23 @@ export function Navbar() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkUser();
     const supabase = createClient();
+    void supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      if (authUser) {
+        setUser({
+          username: (authUser.user_metadata?.username as string) || authUser.email?.split("@")[0] || "User",
+          display_name: (authUser.user_metadata?.display_name as string) || null,
+          avatar_url: null,
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    }).catch(() => {
+      setUser(null);
+      setLoading(false);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
@@ -43,27 +58,10 @@ export function Navbar() {
       } else {
         setUser(null);
       }
+      setLoading(false);
     });
     return () => subscription.unsubscribe();
   }, []);
-
-  async function checkUser() {
-    try {
-      const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        setUser({
-          username: (authUser.user_metadata?.username as string) || authUser.email?.split("@")[0] || "User",
-          display_name: (authUser.user_metadata?.display_name as string) || null,
-          avatar_url: null,
-        });
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function signOut() {
     const supabase = createClient();
