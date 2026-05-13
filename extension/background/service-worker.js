@@ -1,4 +1,4 @@
-importScripts("/shared/browser-api.js", "/shared/prompts.js", "/shared/styles.js", "/shared/providers.js");
+importScripts("/shared/browser-api.js", "/shared/prompts.js", "/shared/styles.js", "/shared/providers.js", "/shared/gallery-client.js");
 
 const ext = self.RestyleBrowserApi;
 
@@ -202,7 +202,7 @@ async function handleExternalMessage(message, sender) {
       const morphixFile = data[0].morphix_file;
 
       // Import into extension storage
-      const project = await RestyleStorage.importFromMorphix(morphixFile, "sync");
+      const project = await RestyleStorage.importFromMorphix(morphixFile, "saved");
 
       // Record the install
       try {
